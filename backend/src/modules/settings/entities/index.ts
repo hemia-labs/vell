@@ -1,0 +1,1 @@
+export { Setting, SettingType, SettingGroup } from './setting.entity';

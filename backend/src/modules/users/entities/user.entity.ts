@@ -1,4 +1,5 @@
 import { Role } from '../../../modules/roles/entities/role.entity';
+import { RefreshToken } from '../../../modules/auth/entities/refresh-token.entity';
 import {
   Entity,
   PrimaryGeneratedColumn,
@@ -8,6 +9,7 @@ import {
   DeleteDateColumn,
   ManyToMany,
   JoinTable,
+  OneToMany,
 } from 'typeorm';
 
 @Entity('users')
@@ -29,7 +31,7 @@ export class User {
 
   @ManyToMany(() => Role, (role) => role.users, { cascade: true })
   @JoinTable({
-    name: 'user_roles', 
+    name: 'user_roles',
     joinColumn: { name: 'user_id', referencedColumnName: 'id' },
     inverseJoinColumn: { name: 'role_id', referencedColumnName: 'id' }
   })
@@ -46,6 +48,9 @@ export class User {
 
   @DeleteDateColumn({ name: 'deleted_at' })
   deletedAt?: Date;
+
+  @OneToMany(() => RefreshToken, (refreshToken) => refreshToken.user)
+  refreshTokens: RefreshToken[];
 }
 
 export default User;
