@@ -1,4 +1,4 @@
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from "typeorm";
 import { Permission } from "../../permissions/entities/permission.entity";
 import { User } from "../../users/entities/user.entity";
 
@@ -9,6 +9,9 @@ export class Role {
 
   @Column({ unique: true })
   name: string;
+
+  @Column({ unique: true })
+  slug: string;
 
   @Column({ nullable: true })
   description: string;
@@ -23,4 +26,13 @@ export class Role {
     inverseJoinColumn: { name: 'permission_id', referencedColumnName: 'id' }
   })
   permissions: Permission[];
+
+  @CreateDateColumn({ name: 'created_at', default: () => 'CURRENT_TIMESTAMP' })
+  createdAt: Date;
+
+  @UpdateDateColumn({ name: 'updated_at', default: () => 'CURRENT_TIMESTAMP', onUpdate: 'CURRENT_TIMESTAMP' })
+  updatedAt: Date;
+
+  @DeleteDateColumn({ name: 'deleted_at', nullable: true })
+  deletedAt?: Date;
 }

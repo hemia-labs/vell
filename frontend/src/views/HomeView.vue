@@ -55,7 +55,7 @@ onMounted(async () => {
         <div v-else class="status-error">
           ❌ Backend Offline
           <div class="status-details">
-            Asegúrate de iniciar el backend con: bun run dev:backend
+            Asegúrate de iniciar el backend con: pnpm run dev:backend
           </div>
         </div>
       </div>

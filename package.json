@@ -3,23 +3,23 @@
   "version": "1.0.0",
   "description": "A lightweight, high-performance Headless CMS built with NestJS and Vue 3",
   "private": true,
-  "workspaces": [
-    "backend",
-    "frontend"
-  ],
   "scripts": {
-    "dev": "bun run --filter '*' dev",
-    "dev:backend": "bun run --filter backend dev",
-    "dev:frontend": "bun run --filter frontend dev",
-    "build": "bun run --filter '*' build",
-    "build:backend": "bun run --filter backend build",
-    "build:frontend": "bun run --filter frontend build",
+    "dev": "pnpm --parallel --filter '*' dev",
+    "dev:backend": "pnpm --filter backend dev",
+    "dev:frontend": "pnpm --filter frontend dev",
+    "build": "pnpm --filter '*' build",
+    "build:backend": "pnpm --filter backend build",
+    "build:frontend": "pnpm --filter frontend build",
+    "lint": "pnpm --filter '*' lint",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",
-    "db:logs": "docker-compose logs -f postgres"
+    "db:logs": "docker-compose logs -f postgres",
+    "clean": "pnpm --filter '*' clean && rm -rf node_modules",
+    "install:all": "pnpm install"
   },
   "engines": {
     "node": ">=18.0.0",
-    "bun": ">=1.0.0"
-  }
+    "pnpm": ">=8.0.0"
+  },
+  "packageManager": "pnpm@8.15.0"
 }
