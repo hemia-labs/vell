@@ -1,0 +1,25 @@
+{
+  "name": "vell",
+  "version": "1.0.0",
+  "description": "A lightweight, high-performance Headless CMS built with NestJS and Vue 3",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "bun run --filter '*' dev",
+    "dev:backend": "bun run --filter backend dev",
+    "dev:frontend": "bun run --filter frontend dev",
+    "build": "bun run --filter '*' build",
+    "build:backend": "bun run --filter backend build",
+    "build:frontend": "bun run --filter frontend build",
+    "db:up": "docker-compose up -d",
+    "db:down": "docker-compose down",
+    "db:logs": "docker-compose logs -f postgres"
+  },
+  "engines": {
+    "node": ">=18.0.0",
+    "bun": ">=1.0.0"
+  }
+}
