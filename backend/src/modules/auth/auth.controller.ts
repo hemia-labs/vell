@@ -14,7 +14,6 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
-  @HttpCode(HttpStatus.OK)
   async login(
     @Body(ValidationPipe) loginDto: LoginDto,
     @Req() req: Request,   
@@ -33,7 +32,21 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@Req() req: any) {
-    return req.user;
+    const { userId, email, name, avatarUrl, roles, permissions } = req.user;
+
+    return {
+      user: {
+        id: userId,
+        email,
+        name,
+        avatarUrl: avatarUrl ?? null,
+        emailVerified: true,
+      },
+      authorization: {
+        roles: roles ?? [],
+        permissions: permissions ?? [],
+      },
+    };
   }
 
   @UseGuards(JwtAuthGuard)

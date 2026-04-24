@@ -1,148 +1,169 @@
-<script setup lang="ts">
-import { ref, onMounted } from 'vue'
-
-const backendStatus = ref<any>(null)
-const loading = ref(true)
-
-onMounted(async () => {
-  try {
-    const response = await fetch('/api/health')
-    backendStatus.value = await response.json()
-  } catch (error) {
-    console.error('Failed to connect to backend:', error)
-    backendStatus.value = { status: 'error', message: 'Backend not available' }
-  } finally {
-    loading.value = false
-  }
-})
-</script>
-
 <template>
-  <div class="home">
-    <h1>🚀 Vell CMS</h1>
-    <p class="tagline">A lightweight, high-performance Headless CMS</p>
-    
-    <div class="info">
-      <h2>Stack Tecnológico</h2>
-      <div class="stack">
-        <div class="stack-item">
-          <h3>Backend</h3>
-          <ul>
-            <li>NestJS</li>
-            <li>PostgreSQL</li>
-            <li>TypeORM</li>
-          </ul>
+  <div class="home-view">
+    <section class="greeting">
+      <div>
+        <h1>Bienvenido a <span>Vell CMS</span></h1>
+        <p>Administra contenido, modelos, activos y automatizaciones desde un espacio limpio y preparado para crecer.</p>
+      </div>
+
+      <div class="stats-card" aria-label="Resumen del espacio">
+        <div>
+          <span class="stats-card__label">Contenido</span>
+          <strong>1,284</strong>
         </div>
-        <div class="stack-item">
-          <h3>Frontend</h3>
-          <ul>
-            <li>Vue 3</li>
-            <li>Vite</li>
-            <li>TypeScript</li>
-          </ul>
+        <div class="stats-card__divider"></div>
+        <div>
+          <span class="stats-card__label">Modelos</span>
+          <strong>18</strong>
         </div>
       </div>
-      
-      <div class="backend-status">
-        <h3>Backend Status</h3>
-        <div v-if="loading">Conectando...</div>
-        <div v-else-if="backendStatus?.status === 'ok'" class="status-ok">
-          ✅ Backend Online
-          <div class="status-details">
-            {{ backendStatus.service }}
-          </div>
-        </div>
-        <div v-else class="status-error">
-          ❌ Backend Offline
-          <div class="status-details">
-            Asegúrate de iniciar el backend con: pnpm run dev:backend
-          </div>
-        </div>
-      </div>
-    </div>
+    </section>
+
+    <section class="placeholder-grid" aria-label="Accesos rápidos">
+      <article class="placeholder-card placeholder-card--hero">
+        <span class="placeholder-card__eyebrow">Dashboard</span>
+        <h2>Tu layout privado ya está listo.</h2>
+        <p>Este espacio queda preparado para construir el panel principal con tarjetas, tablas y flujos de contenido.</p>
+      </article>
+
+      <article class="placeholder-card">
+        <span class="placeholder-card__eyebrow">Siguiente</span>
+        <h2>Crear módulos</h2>
+        <p>Podemos conectar aquí vistas como contenido, modelos, activos, equipo y ajustes.</p>
+      </article>
+    </section>
   </div>
 </template>
 
 <style scoped>
-.home {
-  padding: 2rem;
-  max-width: 800px;
-  margin: 0 auto;
+.home-view {
+  display: flex;
+  flex-direction: column;
+  gap: 36px;
 }
 
-h1 {
-  font-size: 3rem;
-  margin-bottom: 0.5rem;
+.greeting {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 28px;
 }
 
-.tagline {
-  font-size: 1.2rem;
-  color: #666;
-  margin-bottom: 3rem;
+.greeting h1 {
+  margin: 0 0 8px;
+  color: var(--app-ink);
+  font-family: 'Instrument Serif', ui-serif, Georgia, serif;
+  font-size: clamp(36px, 5vw, 44px);
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  line-height: 1.05;
 }
 
-.info {
-  background: #f5f5f5;
-  padding: 2rem;
-  border-radius: 8px;
-  margin-top: 2rem;
+.greeting h1 span {
+  color: var(--app-muted);
+  font-style: italic;
 }
 
-@media (prefers-color-scheme: dark) {
-  .info {
-    background: #333;
-  }
-  .tagline {
-    color: #aaa;
-  }
+.greeting p {
+  max-width: 520px;
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 14px;
 }
 
-.stack {
+.stats-card {
+  display: flex;
+  gap: 28px;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius);
+  background: var(--app-surface);
+  padding: 14px 22px;
+}
+
+.stats-card > div:not(.stats-card__divider) {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.stats-card__label {
+  color: var(--app-muted);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.stats-card strong {
+  color: var(--app-ink);
+  font-size: 20px;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+}
+
+.stats-card__divider {
+  width: 1px;
+  background: var(--app-line);
+}
+
+.placeholder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 2rem;
-  margin: 2rem 0;
+  grid-template-columns: 1.4fr 1fr;
+  gap: 14px;
 }
 
-.stack-item {
-  text-align: left;
+.placeholder-card {
+  min-height: 200px;
+  border: 1px solid var(--app-line);
+  border-radius: var(--app-radius-lg);
+  background: var(--app-surface);
+  padding: 18px;
 }
 
-.stack-item h3 {
-  margin-bottom: 1rem;
-  color: #42b883;
+.placeholder-card--hero {
+  border-color: var(--app-ink);
+  background: var(--app-ink);
+  color: var(--app-bg);
 }
 
-.stack-item ul {
-  list-style: none;
+.placeholder-card__eyebrow {
+  color: var(--app-muted);
+  font-family: 'Geist Mono', ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
-.stack-item li {
-  padding: 0.3rem 0;
+.placeholder-card--hero .placeholder-card__eyebrow,
+.placeholder-card--hero p {
+  color: color-mix(in oklab, var(--app-bg) 74%, transparent);
 }
 
-.backend-status {
-  margin-top: 2rem;
-  padding-top: 2rem;
-  border-top: 1px solid #ddd;
+.placeholder-card h2 {
+  margin: 18px 0 8px;
+  color: inherit;
+  font-size: 22px;
+  font-weight: 550;
+  letter-spacing: -0.015em;
+  line-height: 1.25;
 }
 
-.status-ok {
-  color: #42b883;
-  font-weight: bold;
-  margin-top: 1rem;
+.placeholder-card p {
+  margin: 0;
+  color: var(--app-muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.status-error {
-  color: #f56c6c;
-  font-weight: bold;
-  margin-top: 1rem;
-}
+@media (max-width: 760px) {
+  .greeting,
+  .stats-card {
+    align-items: stretch;
+    flex-direction: column;
+  }
 
-.status-details {
-  font-size: 0.9rem;
-  font-weight: normal;
-  margin-top: 0.5rem;
-  opacity: 0.8;
+  .placeholder-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

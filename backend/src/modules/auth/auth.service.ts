@@ -39,6 +39,7 @@ export class AuthService {
       sub: user.id,
       email: user.email,
       name: user.name,
+      avatarUrl: user.avatar ?? null,
       roles,
       permissions,
     };
@@ -118,6 +119,7 @@ export class AuthService {
           sub: payload.userId,
           email: foundUser.email,
           name: foundUser.name,
+          avatarUrl: foundUser.avatar ?? null,
           roles,
           permissions,
         });
