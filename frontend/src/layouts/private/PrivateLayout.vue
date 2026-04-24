@@ -34,8 +34,7 @@ import { SidebarInset, SidebarProvider } from '@/components/ui/sidebar'
 
 .private-layout__content {
   width: 100%;
-  max-width: 1200px;
-  padding: 32px 40px 80px;
+  padding: 32px clamp(20px, 3vw, 72px) 80px;
 }
 
 @media (max-width: 900px) {

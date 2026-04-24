@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { Bell, FileText, Plus } from 'lucide-vue-next'
+import { Bell, Plus } from 'lucide-vue-next'
 import { computed } from 'vue'
 import { useRoute } from 'vue-router'
 import { SidebarTrigger } from '@/components/ui/sidebar'

@@ -20,6 +20,15 @@ const router = createRouter({
             title: 'Inicio',
             requiresAuth: true
           }
+        },
+        {
+          path: 'users',
+          name: 'users',
+          component: () => import('@/views/users/UsersListView.vue'),
+          meta: {
+            title: 'Usuarios',
+            requiresAuth: true
+          }
         }
       ]
     },

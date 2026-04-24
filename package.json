@@ -6,10 +6,10 @@
   "scripts": {
     "dev": "pnpm --parallel --filter '*' dev",
     "dev:backend": "pnpm --filter backend dev",
-    "dev:frontend": "pnpm --filter frontend dev",
+    "dev:frontend": "pnpm --filter vell-cms dev",
     "build": "pnpm --filter '*' build",
     "build:backend": "pnpm --filter backend build",
-    "build:frontend": "pnpm --filter frontend build",
+    "build:frontend": "pnpm --filter vell-cms build",
     "lint": "pnpm --filter '*' lint",
     "db:up": "docker-compose up -d",
     "db:down": "docker-compose down",

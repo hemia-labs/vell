@@ -86,31 +86,31 @@ const navigationGroups = [
   {
     label: 'Contenido',
     items: [
-      { label: 'Contenidos', icon: FileText, to: { name: 'home' } },
-      { label: 'Páginas', icon: File, to: { name: 'home' } },
-      { label: 'Tipos de Contenido', icon: FolderTree, to: { name: 'home' } }
+      { label: 'Contenidos', icon: FileText, to: '/content' },
+      { label: 'Páginas', icon: File, to: '/pages' },
+      { label: 'Tipos de Contenido', icon: FolderTree, to: '/content-types' }
     ]
   },
   {
     label: 'Organización',
     items: [
-      { label: 'Categorías', icon: Tags, to: { name: 'home' } },
-      { label: 'Etiquetas', icon: Tag, to: { name: 'home' } }
+      { label: 'Categorías', icon: Tags, to: '/categories' },
+      { label: 'Etiquetas', icon: Tag, to: '/tags' }
     ]
   },
   {
     label: 'Assets',
     items: [
-      { label: 'Media Library', icon: Images, to: { name: 'home' } }
+      { label: 'Media Library', icon: Images, to: '/media' }
     ]
   },
   {
     label: 'Administración',
     items: [
-      { label: 'Usuarios', icon: Users, to: { name: 'home' } },
-      { label: 'Roles y Permisos', icon: ShieldCheck, to: { name: 'home' } },
-      { label: 'Audit Log', icon: ClipboardList, to: { name: 'home' } },
-      { label: 'Ajustes', icon: Settings, to: { name: 'home' } }
+      { label: 'Usuarios', icon: Users, to: { name: 'users' } },
+      { label: 'Roles y Permisos', icon: ShieldCheck, to: '/roles-and-permissions' },
+      { label: 'Audit Log', icon: ClipboardList, to: '/audit-log' },
+      { label: 'Ajustes', icon: Settings, to: '/settings' }
     ]
   }
 ]
@@ -176,7 +176,7 @@ const navigationGroups = [
                 <SidebarMenuButton
                   as="a"
                   :href="href"
-                  :is-active="false"
+                  :is-active="isActive"
                   :tooltip="item.label"
                   :class="navItemClass"
                   @click="navigate"
@@ -217,9 +217,11 @@ const navigationGroups = [
 
 <style scoped>
 .app-sidebar {
+  --sidebar-accent: #fff;
+  --sidebar-accent-foreground: var(--app-ink);
   --app-sidebar-bg: var(--app-bg);
   --app-sidebar-surface: var(--app-surface);
-  --app-sidebar-surface-hover: #b3b3b3;
+  --app-sidebar-surface-hover: #fff;
   --app-sidebar-ink: var(--app-ink);
   --app-sidebar-ink-muted: var(--app-ink-2);
   --app-sidebar-muted: var(--app-muted);
@@ -368,7 +370,7 @@ const navigationGroups = [
 
 .app-sidebar:not(.app-sidebar--dark) .nav-item {
   border-color: var(--app-sidebar-line);
-  background: color-mix(in oklab, var(--app-sidebar-surface) 78%, var(--app-sidebar-bg));
+  background: transparent;
 }
 
 .nav-item[data-active='true'] {
@@ -380,10 +382,16 @@ const navigationGroups = [
 }
 
 :global(.app-sidebar .nav-item:hover) {
-  border-color: transparent !important;
-  background: transparent !important;
-  box-shadow: none !important;
-  color: var(--app-sidebar-ink-muted) !important;
+  border-color: var(--app-sidebar-line) !important;
+  background: var(--app-sidebar-surface-hover) !important;
+  color: var(--app-sidebar-ink) !important;
+}
+
+:global(.app-sidebar:not(.app-sidebar--dark) [data-sidebar='menu-button']:hover) {
+  border-color: var(--app-sidebar-line) !important;
+  background: #fff !important;
+  box-shadow: var(--app-sidebar-active-shadow) !important;
+  color: var(--app-sidebar-ink) !important;
 }
 
 :global(.app-sidebar.app-sidebar--dark .nav-item) {
@@ -393,19 +401,7 @@ const navigationGroups = [
 }
 
 :global(.app-sidebar.app-sidebar--dark .nav-item:hover) {
-  border-color: var(--app-sidebar-line) !important;
   background: var(--app-sidebar-surface-hover) !important;
-  color: var(--app-sidebar-ink) !important;
-}
-
-:global(.app-sidebar:not(.app-sidebar--dark) .nav-item),
-:global(.app-sidebar:not(.app-sidebar--dark) .nav-item:hover) {
-  border-color: var(--app-sidebar-line) !important;
-  background: color-mix(in oklab, var(--app-sidebar-surface) 78%, var(--app-sidebar-bg)) !important;
-}
-
-:global(.app-sidebar:not(.app-sidebar--dark) .nav-item:hover) {
-  background: #fff !important;
 }
 
 :global(.app-sidebar .nav-item[data-active='true']),

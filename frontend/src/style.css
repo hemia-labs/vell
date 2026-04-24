@@ -8,7 +8,7 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  font-family: 'Inter', -apple-system, ui-sans-serif, system-ui, sans-serif;
+  font-family: Inter, Arial, "Helvetica Neue", Helvetica, sans-serif;
   line-height: 1.5;
   font-weight: 400;
 

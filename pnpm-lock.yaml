@@ -125,6 +125,9 @@ importers:
       '@tailwindcss/vite':
         specifier: ^4.2.4
         version: 4.2.4(vite@5.4.21)
+      '@tanstack/vue-table':
+        specifier: ^8.21.3
+        version: 8.21.3(vue@3.5.32)
       '@vuelidate/core':
         specifier: ^2.0.3
         version: 2.0.3(vue@3.5.32)
@@ -2020,8 +2023,23 @@ packages:
       vite: 5.4.21(@types/node@20.19.39)
     dev: false
 
+  /@tanstack/table-core@8.21.3:
+    resolution: {integrity: sha512-ldZXEhOBb8Is7xLs01fR3YEc3DERiz5silj8tnGkFZytt1abEvl/GhUmCE0PMLaMPTa3Jk4HbKmRlHmu+gCftg==}
+    engines: {node: '>=12'}
+    dev: false
+
   /@tanstack/virtual-core@3.14.0:
     resolution: {integrity: sha512-JLANqGy/D6k4Ujmh8Tr25lGimuOXNiaVyXaCAZS0W+1390sADdGnyUdSWNIfd49gebtIxGMij4IktRVzrdr12Q==}
+    dev: false
+
+  /@tanstack/vue-table@8.21.3(vue@3.5.32):
+    resolution: {integrity: sha512-rusRyd77c5tDPloPskctMyPLFEQUeBzxdQ+2Eow4F7gDPlPOB1UnnhzfpdvqZ8ZyX2rRNGmqNnQWm87OI2OQPw==}
+    engines: {node: '>=12'}
+    peerDependencies:
+      vue: '>=3.2'
+    dependencies:
+      '@tanstack/table-core': 8.21.3
+      vue: 3.5.32(typescript@5.9.3)
     dev: false
 
   /@tanstack/vue-virtual@3.13.24(vue@3.5.32):
