@@ -4,16 +4,16 @@ export class UserDto {
     email: string;
     avatar: string | null;
     roles: UserRoleDto[];
+    lastLogin: Date | null;
     isActive: boolean;
 }
 
 export class UserRoleDto {
-    id: string;
+    id?: string;
     name: string;
     slug: string;
     description: string;
     permissions: {
-        id: string;
         slug: string;
         description: string;
     }[];

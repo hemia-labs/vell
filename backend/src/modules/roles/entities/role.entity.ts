@@ -16,6 +16,9 @@ export class Role {
   @Column({ nullable: true })
   description: string;
 
+  @Column({ nullable: true })
+  scope: string;
+
   @ManyToMany(() => User, (user) => user.roles)
   users: User[];
 

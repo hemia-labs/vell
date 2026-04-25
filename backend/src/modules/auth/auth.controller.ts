@@ -32,7 +32,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   async getProfile(@Req() req: any) {
-    const { userId, email, name, avatarUrl, roles, permissions } = req.user;
+    const { userId, email, name, avatarUrl, roles, permissions, lastLogin } = req.user;
 
     return {
       user: {
@@ -41,6 +41,7 @@ export class AuthController {
         name,
         avatarUrl: avatarUrl ?? null,
         emailVerified: true,
+        lastLogin: new Date(lastLogin).toLocaleString('es-MX', { timeZone: 'America/Mexico_City' }),
       },
       authorization: {
         roles: roles ?? [],

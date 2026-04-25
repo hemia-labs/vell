@@ -1,10 +1,11 @@
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
 import { AuthGuard } from "@/common/guards/auth.guard";
-import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
 import { UsersService } from "./user.service";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateUserDto } from "./dtos/create-user.dto";
 import { UpdateUserDto } from "./dtos/update-user.dto";
+import { FilterUserDto } from "./dtos/filter-user.dto";
 
 @Controller('api/v1/users')
 @UseInterceptors(ClassSerializerInterceptor)
@@ -15,8 +16,8 @@ export class UsersController {
 
     @Get()
     @Permissions('users:view')
-    async findAll() {
-        return await this.usersService.findAll();
+    async findAll(@Query() query: FilterUserDto) {
+        return await this.usersService.findAll(query);
     }
 
     @Get(':id')

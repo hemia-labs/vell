@@ -13,6 +13,10 @@ export class CreateRoleDto {
     @IsString( { message: 'La descripción del rol debe ser una cadena de texto' })
     description: string;
 
+    @IsOptional()
+    @IsString( { message: 'El scope del rol debe ser una cadena de texto' })
+    scope: string;
+
     @IsNotEmpty({ message: 'Los permisos son obligatorios' })
     @IsArray({ message: 'Los permisos deben ser un arreglo' })
     @IsUUID('4', { each: true, message: 'Cada ID de permiso debe ser un UUID válido' })

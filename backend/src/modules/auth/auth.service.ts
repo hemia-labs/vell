@@ -6,6 +6,7 @@ import { ConfigService } from "@nestjs/config";
 import { UserDto } from "../users/dtos/user.dto";
 import { AuthResponseDto } from "./dtos/auth-response.dto";
 import { genSalt, hash } from "bcrypt";
+import { last } from "rxjs";
 
 @Injectable()
 export class AuthService {
@@ -34,6 +35,7 @@ export class AuthService {
     const permissionsSet = new Set<string>();
     user.roles?.forEach(r => r.permissions?.forEach(p => permissionsSet.add(p.slug)));
     const permissions = Array.from(permissionsSet);
+    const lastLogin = new Date();
 
     const payload = {
       sub: user.id,
@@ -42,10 +44,13 @@ export class AuthService {
       avatarUrl: user.avatar ?? null,
       roles,
       permissions,
+      lastLogin: lastLogin
     };
 
     const accessToken = this.jwtService.sign(payload);
     const refreshToken = await this.generateRefreshToken(user.id);
+
+    this.usersService.updateLastLogin(user.id, lastLogin);
 
     const isProduction = this.configService.get('NODE_ENV') === 'production';
     const cookieDomain = this.configService.get('COOKIE_DOMAIN');
@@ -114,6 +119,7 @@ export class AuthService {
         const permissionsSet = new Set<string>();
         foundUser.roles?.forEach(r => r.permissions?.forEach(p => permissionsSet.add(p.slug)));
         const permissions = Array.from(permissionsSet);
+        const lastLogin = new Date();
 
         const newAccessToken = this.jwtService.sign({
           sub: payload.userId,
@@ -122,8 +128,11 @@ export class AuthService {
           avatarUrl: foundUser.avatar ?? null,
           roles,
           permissions,
+          lastLogin: lastLogin
         });
         const newRefreshToken = await this.generateRefreshToken(payload.userId);
+
+        this.usersService.updateLastLogin(payload.userId, lastLogin);
 
         const isProduction = this.configService.get('NODE_ENV') === 'production';
         const cookieDomain = this.configService.get('COOKIE_DOMAIN');

@@ -29,6 +29,15 @@ const router = createRouter({
             title: 'Usuarios',
             requiresAuth: true
           }
+        },
+        {
+          path: 'roles',
+          name: 'roles',
+          component: () => import('@/views/roles/RolesListView.vue'),
+          meta: {
+            title: 'Roles',
+            requiresAuth: true
+          }
         }
       ]
     },

@@ -14,11 +14,11 @@ const PERMISSIONS = [
 ];
 
 const ROLES = [
-  { name: 'super-admin', slug: 'super-admin', description: 'Full system access', permissions: ['*'] },
-  { name: 'admin', slug: 'admin', description: 'Administrative access', permissions: ['content:*', 'pages:*', 'media:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
-  { name: 'editor', slug: 'editor', description: 'Content editor access', permissions: ['content:*', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'settings:view'] },
-  { name: 'author', slug: 'author', description: 'Content author access', permissions: ['content:view', 'content:create', 'content:edit:own', 'media:view', 'media:upload', 'pages:view'] },
-  { name: 'viewer', slug: 'viewer', description: 'Read-only access', permissions: ['content:view', 'pages:view', 'media:view'] },
+  { name: 'super-admin', slug: 'super-admin', description: 'Acceso completo', scope: 'Acceso completo', permissions: ['*'] },
+  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', permissions: ['content:*', 'pages:*', 'media:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
+  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', permissions: ['content:*', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'settings:view'] },
+  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', permissions: ['content:view', 'content:create', 'content:edit:own', 'media:view', 'media:upload', 'pages:view'] },
+  { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', permissions: ['content:view', 'pages:view', 'media:view'] },
 ];
 
 function expandRolePermissions(permissions: string[]): string[] {
@@ -53,8 +53,8 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
 
     for (const role of ROLES) {
       await queryRunner.query(
-        `INSERT INTO "roles" ("name", "slug", "description") VALUES ($1, $2, $3) ON CONFLICT ("slug") DO NOTHING`,
-        [role.name, role.slug, role.description]
+        `INSERT INTO "roles" ("name", "slug", "description", "scope") VALUES ($1, $2, $3, $4) ON CONFLICT ("slug") DO NOTHING`,
+        [role.name, role.slug, role.description, role.scope]
       );
       for (const permSlug of expandRolePermissions(role.permissions)) {
         await queryRunner.query(

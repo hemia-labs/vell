@@ -6,6 +6,7 @@ import { RoleDto } from "./dtos/role.dto";
 import { RoleMapper } from "./mappers/role.mapper";
 import { CreateRoleDto } from "./dtos/create-role.dto";
 import { UpdateRoleDto } from "./dtos/update-role.dto";
+import { FilterRoleDto } from "./dtos/filter-role.dto";
 
 @Injectable()
 export class RolesService {
@@ -19,8 +20,12 @@ export class RolesService {
      * Obtiene todos los roles disponibles en la base de datos, incluyendo sus permisos relacionados, y los convierte a un array de RoleDto utilizando el RoleMapper.
      * @returns Un array de RoleDto que representa todos los roles disponibles.
      */
-    async findAll(): Promise<RoleDto[]> {
-        const roles = await this.repository.find({ relations: ['permissions'] });
+    async findAll(params: FilterRoleDto): Promise<RoleDto[]> {
+        if(params.permissions || params.permissions === 'true') {
+            const rolesWithPermissions = await this.repository.find({ relations: ['permissions'] });
+            return rolesWithPermissions.map(role => RoleMapper.toDTO(role));
+        }
+        const roles = await this.repository.find();
         return roles.map(role => RoleMapper.toDTO(role));
     }
 

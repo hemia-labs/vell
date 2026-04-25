@@ -11,11 +11,12 @@ export class RoleMapper {
         roleDto.name = role.name;
         roleDto.slug = role.slug;
         roleDto.description = role.description;
-        roleDto.permissions = role.permissions.map(permission => ({
+        roleDto.scope = role.scope;
+        roleDto.permissions = role.permissions ? role.permissions.map(permission => ({
             id: permission.id,
             slug: permission.slug,
             description: permission.description
-        }));
+        })) : [];
         return roleDto;
     }
 
@@ -24,6 +25,7 @@ export class RoleMapper {
         role.name = roleDto.name;
         role.slug = roleDto.slug;
         role.description = roleDto.description;
+        role.scope = roleDto.scope;
         if(roleDto.permissionIds) {
             role.permissions = roleDto.permissionIds.map(id => ({ id } as Permission));
         }
@@ -35,6 +37,7 @@ export class RoleMapper {
         role.name = roleDto.name;
         role.slug = roleDto.slug;
         role.description = roleDto.description;
+        role.scope = roleDto.scope;
         if(roleDto.permissionIds) {
             role.permissions = roleDto.permissionIds.map(id => ({ id } as Permission));
         }

@@ -37,6 +37,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       avatarUrl: payload.avatarUrl ?? null,
       roles: payload.roles,
       permissions: payload.permissions,
+      lastLogin: payload.lastLogin
     };
   }
 }

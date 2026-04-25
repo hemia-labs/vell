@@ -37,6 +37,9 @@ export class User {
   })
   roles: Role[];
 
+  @Column({ name: 'last_login', type: 'timestamp', nullable: true })
+  lastLogin: Date | null;
+
   @Column({ name: 'is_active', default: true })
   isActive: boolean;
 

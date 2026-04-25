@@ -1,10 +1,11 @@
 import { AuthGuard } from "@/common/guards/auth.guard";
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
 import { RolesService } from "./role.service";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateRoleDto } from "./dtos/create-role.dto";
 import { UpdateRoleDto } from "./dtos/update-role.dto";
+import { FilterRoleDto } from "./dtos/filter-role.dto";
 
 
 @Controller('api/v1/roles')
@@ -16,8 +17,8 @@ export class RolesController {
 
     @Get()
     @Permissions('roles:view')
-    async findAll() {
-        return this.rolesService.findAll();
+    async findAll(@Query() query: FilterRoleDto) {
+        return this.rolesService.findAll(query);
     }
 
     @Get(':id')

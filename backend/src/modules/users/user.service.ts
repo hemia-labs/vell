@@ -7,6 +7,7 @@ import { UserDto } from "./dtos/user.dto";
 import { CreateUserDto } from "./dtos/create-user.dto";
 import { UserMapper } from "./mappers/user.mapper";
 import { UpdateUserDto } from "./dtos/update-user.dto";
+import { FilterUserDto } from "./dtos/filter-user.dto";
 
 @Injectable()
 export class UsersService {
@@ -56,10 +57,21 @@ export class UsersService {
         if (!user) {
             throw new NotFoundException('User not found');
         }
-        const newEntity = UserMapper.toUpdateEntity(dto);
+        const currentRoleIds = user.roles?.map(role => role.id) ?? [];
+        const nextRoleIds = dto.roles;
+        const newEntity = UserMapper.toUpdateEntity({ ...dto, roles: undefined });
         const updatedUser = this.userRepository.merge(user, newEntity);
-        const savedUser = await this.userRepository.save(updatedUser);
-        return UserMapper.toDTO(savedUser);
+        await this.userRepository.save(updatedUser);
+
+        if (nextRoleIds !== undefined) {
+            await this.userRepository
+                .createQueryBuilder()
+                .relation(User, 'roles')
+                .of(id)
+                .addAndRemove(nextRoleIds, currentRoleIds);
+        }
+
+        return this.findById(id);
     }
 
     /** Elimina un usuario estableciendo su campo isActive a false y su campo deletedAt a la fecha actual.
@@ -75,12 +87,55 @@ export class UsersService {
     }
 
     /**
-     * Obtiene una lista de todos los usuarios activos en la base de datos.
-     * @returns Una lista de UserDto que representa a los usuarios activos
+     * Obtiene usuarios aplicando filtros de búsqueda, rol, relaciones, estado y paginación.
+     * Por defecto devuelve usuarios activos. Si all=true, devuelve activos e inactivos.
      */
-    async findAll(): Promise<UserDto[]> {
-        const users = await this.userRepository.find({ where: { isActive: true }, relations: ['roles', 'roles.permissions'] });
-        return users.map(user => UserMapper.toDTO(user));
+    async findAll(query: FilterUserDto = {}): Promise<UserDto[]> {
+        const all = this.toBoolean(query.all);
+        const withRoles = query.withRoles === undefined ? true : this.toBoolean(query.withRoles);
+        const withPermissions = this.toBoolean(query.withPermissions);
+        const withRoleId = this.toBoolean(query.withRoleId);
+        const shouldLoadRoles = withRoles || withPermissions || withRoleId;
+        const page = Number(query.page);
+        const limit = Number(query.limit);
+
+        const usersQuery = this.userRepository.createQueryBuilder('user');
+
+        if (all) {
+            usersQuery.withDeleted();
+        } else {
+            usersQuery.where('user.isActive = :isActive', { isActive: true });
+        }
+
+        if (shouldLoadRoles) {
+            usersQuery.leftJoinAndSelect('user.roles', 'role');
+        } else if (query.roleId) {
+            usersQuery.innerJoin('user.roles', 'role');
+        }
+
+        if (withPermissions) {
+            usersQuery.leftJoinAndSelect('role.permissions', 'permission');
+        }
+
+        if (query.search) {
+            usersQuery.andWhere('(user.name ILIKE :search OR user.email ILIKE :search)', {
+                search: `%${query.search}%`
+            });
+        }
+
+        if (query.roleId) {
+            usersQuery.andWhere('role.id = :roleId', { roleId: query.roleId });
+        }
+
+        if (Number.isInteger(page) && Number.isInteger(limit) && page > 0 && limit > 0) {
+            usersQuery.skip((page - 1) * limit).take(limit);
+        }
+
+        const users = await usersQuery
+            .orderBy('user.createdAt', 'DESC')
+            .getMany();
+
+        return users.map(user => UserMapper.toDTO(user, { withRoleId }));
     }
 
     /** Obtiene un usuario por su ID.
@@ -102,11 +157,11 @@ export class UsersService {
      * @throws NotFoundException Si no se encuentra un usuario con el ID proporcionado.
      */
     async findById(id: string): Promise<UserDto> {
-        const user = await this.findOne({ where: { id }, relations: ['roles', 'roles.permissions'] });
+        const user = await this.userRepository.findOne({ where: { id }, relations: ['roles', 'roles.permissions'] });
         if (!user) {
             throw new NotFoundException('User not found');
         }
-        return user;
+        return UserMapper.toDTO(user, { withRoleId: true });
     }
 
     /** Valida las credenciales de un usuario comparando el correo electrónico y la contraseña proporcionados con los almacenados en la base de datos.
@@ -130,6 +185,17 @@ export class UsersService {
         return await this.userRepository.findOne({ where: { email }, relations: ['roles', 'roles.permissions'] });
     }
 
+    /** Actualiza la fecha del último inicio de sesión de un usuario.
+     * @param userId El ID del usuario cuya fecha de último inicio de sesión se desea actualizar.
+     * @param date La nueva fecha de último inicio de sesión.
+     */
+    async updateLastLogin(userId: string, date: Date): Promise<void> {
+        await this.userRepository.update(userId, { lastLogin: date });
+    }
 
+
+    private toBoolean(value: boolean | string | undefined): boolean {
+        return value === true || value === 'true' || value === '1';
+    }
 
 }

@@ -3,5 +3,6 @@ export class RoleDto {
     name: string;
     slug: string;
     description: string;
+    scope: string;
     permissions: any[];
 }

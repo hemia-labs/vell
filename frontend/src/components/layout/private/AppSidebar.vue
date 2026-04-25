@@ -42,6 +42,12 @@ const appVersion = packageJson.version
 
 const currentUserName = computed(() => authStore.currentUser?.user.name ?? 'Cristian Méndez')
 const currentUserEmail = computed(() => authStore.currentUser?.user.email ?? 'admin@vell.dev')
+const currentUserRole = computed(() => {
+  const roles = authStore.currentUser?.authorization.roles ?? []
+
+  return roles[0] ?? 'Sin rol'
+})
+const currentUserRoleCount = computed(() => Math.max((authStore.currentUser?.authorization.roles.length ?? 0) - 1, 0))
 const currentUserInitials = computed(() => {
   return currentUserName.value
     .split(' ')
@@ -108,7 +114,7 @@ const navigationGroups = [
     label: 'Administración',
     items: [
       { label: 'Usuarios', icon: Users, to: { name: 'users' } },
-      { label: 'Roles y Permisos', icon: ShieldCheck, to: '/roles-and-permissions' },
+      { label: 'Roles y Permisos', icon: ShieldCheck, to: { name: 'roles' } },
       { label: 'Audit Log', icon: ClipboardList, to: '/audit-log' },
       { label: 'Ajustes', icon: Settings, to: '/settings' }
     ]
@@ -130,7 +136,14 @@ const navigationGroups = [
             <span class="workspace__logo">V</span>
             <span class="workspace__meta">
               <span class="workspace__name">Vell CMS</span>
-              <span class="workspace__sub">Panel de administración</span>
+              <span class="workspace__sub">
+                <span class="workspace__role">
+                  <ShieldCheck :size="10" />
+                  {{ currentUserRole }}
+                  <b v-if="currentUserRoleCount">+{{ currentUserRoleCount }}</b>
+                </span>
+                <span class="version-row">v{{ appVersion }}</span>
+              </span>
             </span>
             <ChevronDown class="workspace__chevron" :size="12" />
           </SidebarMenuButton>
@@ -197,11 +210,12 @@ const navigationGroups = [
       <SidebarMenu>
         <SidebarMenuItem>
           <div class="user-row">
-            <span class="avatar">{{ currentUserInitials }}</span>
+            <span class="avatar" aria-hidden="true">{{ currentUserInitials }}</span>
             <span class="user-row__meta">
-              <span class="user-row__name">{{ currentUserName }}</span>
+              <span class="user-row__top">
+                <span class="user-row__name">{{ currentUserName }}</span>
+              </span>
               <span class="user-row__email">{{ currentUserEmail }}</span>
-              <span class="version-row">v{{ appVersion }}</span>
             </span>
             <button class="logout-btn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
               <LogOut :size="14" />
@@ -284,7 +298,7 @@ const navigationGroups = [
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 10px;
   line-height: 1.2;
-  opacity: 0.56;
+  opacity: 0.7;
 }
 
 .section-label {
@@ -355,6 +369,27 @@ const navigationGroups = [
   white-space: nowrap;
 }
 
+.workspace__sub {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.workspace__role {
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  gap: 3px;
+  overflow: hidden;
+  color: var(--app-sidebar-muted);
+}
+
+.workspace__role b {
+  color: var(--app-sidebar-muted-soft);
+  font-size: 9.5px;
+  font-weight: 600;
+}
+
 .workspace__chevron {
   margin-left: auto;
   color: var(--app-sidebar-muted-soft);
@@ -419,9 +454,12 @@ const navigationGroups = [
 
 .user-row {
   display: flex;
-  min-height: 44px;
+  min-height: 54px;
   align-items: center;
-  padding: 8px;
+  border: 1px solid var(--app-sidebar-line);
+  background: color-mix(in oklab, var(--app-sidebar-surface) 72%, transparent);
+  padding: 9px;
+  box-shadow: var(--app-sidebar-active-shadow);
 }
 
 .env-switch__dot {
@@ -447,33 +485,45 @@ const navigationGroups = [
 
 .avatar {
   display: grid;
-  width: 24px;
-  height: 24px;
+  width: 32px;
+  height: 32px;
   flex: none;
   place-items: center;
-  border-radius: 999px;
+  border-radius: 10px;
   background: linear-gradient(135deg, #c9bfa7, #7a6f5a);
   color: #fff;
-  font-size: 10.5px;
+  font-size: 11px;
   font-weight: 600;
 }
 
+.user-row__top {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .user-row__name {
+  min-width: 0;
+  overflow: hidden;
   color: var(--app-sidebar-ink);
   font-size: 12.5px;
-  font-weight: 500;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .logout-btn {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 34px;
+  height: 34px;
   flex: none;
   place-items: center;
-  border: 1px solid transparent;
-  border-radius: var(--app-radius-sm);
-  background: transparent;
-  color: var(--app-sidebar-muted-soft);
+  border: 1px solid var(--app-sidebar-line);
+  border-radius: 10px;
+  background: var(--app-sidebar-bg);
+  color: var(--app-sidebar-muted);
   cursor: pointer;
   transition:
     background-color 0.15s ease,
@@ -483,7 +533,7 @@ const navigationGroups = [
 
 .logout-btn:hover {
   border-color: var(--app-sidebar-line);
-  background: var(--app-sidebar-surface);
+  background: color-mix(in oklab, #8b2f2f 12%, var(--app-sidebar-surface));
   color: var(--app-sidebar-ink);
 }
 
@@ -492,7 +542,14 @@ const navigationGroups = [
 :global([data-collapsible='icon']) .version-row,
 :global([data-collapsible='icon']) .env-switch__name,
 :global([data-collapsible='icon']) .env-switch__tag,
-:global([data-collapsible='icon']) .user-row__meta {
+:global([data-collapsible='icon']) .user-row__meta,
+:global([data-collapsible='icon']) .logout-btn {
   display: none;
+}
+
+:global([data-collapsible='icon']) .user-row {
+  min-height: 44px;
+  justify-content: center;
+  padding: 6px;
 }
 </style>

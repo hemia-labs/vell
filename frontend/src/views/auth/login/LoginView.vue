@@ -1,5 +1,6 @@
 <script setup lang="ts">
-import { AlertCircleIcon } from 'lucide-vue-next'
+import { ref } from 'vue'
+import { AlertCircleIcon, Eye, EyeOff } from 'lucide-vue-next'
 import { useLogin } from '@/composables/auth/useLogin'
 import { Field, FieldLabel, FieldContent, FieldError } from '@/components/ui/field'
 import { Button } from '@/components/ui/button'
@@ -8,6 +9,7 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertTitle, AlertDescription } from '@/components/ui/alert'
 
 const { v$, login, isLoading, errorMessage } = useLogin()
+const showPassword = ref(false)
 
 const handleSubmit = async () => {
   await login()
@@ -56,13 +58,26 @@ const handleSubmit = async () => {
             <Field orientation="vertical">
               <FieldLabel class="text-foreground">Contraseña</FieldLabel>
               <FieldContent>
-                <Input
-                  id="password"
-                  v-model="v$.password.$model"
-                  type="password"
-                  class="text-foreground placeholder:text-muted-foreground"
-                  placeholder="••••••••"
-                />
+                <div class="relative">
+                  <Input
+                    id="password"
+                    v-model="v$.password.$model"
+                    :type="showPassword ? 'text' : 'password'"
+                    class="pr-10 text-foreground placeholder:text-muted-foreground"
+                    placeholder="••••••••"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon-sm"
+                    class="absolute right-1 top-1/2 -translate-y-1/2"
+                    :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                    @click="showPassword = !showPassword"
+                  >
+                    <EyeOff v-if="showPassword" :size="16" />
+                    <Eye v-else :size="16" />
+                  </Button>
+                </div>
                 <FieldError class="text-left" v-if="v$.password.$error">{{ v$.password.$errors[0].$message }}</FieldError>
               </FieldContent>
             </Field>
