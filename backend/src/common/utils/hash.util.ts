@@ -8,7 +8,7 @@ import * as bcrypt from 'bcrypt';
  */
 export async function hashPassword(
   password: string,
-  saltRounds: number = process.env.BCRYPT_SALT_ROUNDS ? parseInt(process.env.BCRYPT_SALT_ROUNDS) : 10,
+  saltRounds: number = 10,
 ): Promise<string> {
   const salt = await bcrypt.genSalt(saltRounds);
   const hashedPassword = await bcrypt.hash(password, salt);

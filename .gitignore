@@ -60,4 +60,5 @@ next-env.d.ts
 .claude/
 .agents/
 
-*.lock
+*.lock.env
+.mcp.json

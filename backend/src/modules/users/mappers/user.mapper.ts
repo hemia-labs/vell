@@ -34,7 +34,7 @@ export class UserMapper {
         };
     }
 
-    static toCreateEntity(userDto: CreateUserDto): User {
+    static toCreateEntity(userDto: CreateUserDto): Partial<User> {
         const user = new User();
         user.name = userDto.name;
         user.email = userDto.email;
@@ -44,7 +44,7 @@ export class UserMapper {
         return user;
     }
 
-    static toUpdateEntity(userDto: UpdateUserDto): User {
+    static toUpdateEntity(userDto: UpdateUserDto): Partial<User> {
         const user = new User();
         user.name = userDto.name;
         user.email = userDto.email;

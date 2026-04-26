@@ -14,11 +14,11 @@ const PERMISSIONS = [
 ];
 
 const ROLES = [
-  { name: 'super-admin', slug: 'super-admin', description: 'Acceso completo', scope: 'Acceso completo', permissions: ['*'] },
-  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', permissions: ['content:*', 'pages:*', 'media:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
-  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', permissions: ['content:*', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'settings:view'] },
-  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', permissions: ['content:view', 'content:create', 'content:edit:own', 'media:view', 'media:upload', 'pages:view'] },
-  { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', permissions: ['content:view', 'pages:view', 'media:view'] },
+  { name: 'super-admin', slug: 'super-admin', description: 'Acceso completo', scope: 'Acceso completo', level: 0, permissions: ['*'] },
+  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', level: 1, permissions: ['content:*', 'pages:*', 'media:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
+  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', level: 2, permissions: ['content:*', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'settings:view'] },
+  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', level: 3, permissions: ['content:view', 'content:create', 'content:edit:own', 'media:view', 'media:upload', 'pages:view'] },
+  { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', level: 4, permissions: ['content:view', 'pages:view', 'media:view'] },
 ];
 
 function expandRolePermissions(permissions: string[]): string[] {
@@ -39,10 +39,12 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
   name = 'SeedRolesAndPermissions1808434165290';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Super admin from env
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.com';
-    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD || 'superadminpassword';
-    const passwordHash = await hashPassword(superAdminPassword);
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+    const superAdminPassword = process.env.SUPER_ADMIN_PASSWORD;
+
+    if (!superAdminEmail || !superAdminPassword) {
+      console.warn('[SeedRolesAndPermissions] SUPER_ADMIN_EMAIL or SUPER_ADMIN_PASSWORD not set — skipping super-admin user creation');
+    }
 
     for (const slug of PERMISSIONS) {
       await queryRunner.query(
@@ -53,8 +55,8 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
 
     for (const role of ROLES) {
       await queryRunner.query(
-        `INSERT INTO "roles" ("name", "slug", "description", "scope") VALUES ($1, $2, $3, $4) ON CONFLICT ("slug") DO NOTHING`,
-        [role.name, role.slug, role.description, role.scope]
+        `INSERT INTO "roles" ("name", "slug", "description", "scope", "level") VALUES ($1, $2, $3, $4, $5) ON CONFLICT ("slug") DO NOTHING`,
+        [role.name, role.slug, role.description, role.scope, role.level]
       );
       for (const permSlug of expandRolePermissions(role.permissions)) {
         await queryRunner.query(
@@ -67,24 +69,32 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
       }
     }
 
-    // Seed super-admin user
-    await queryRunner.query(
-      `INSERT INTO "users" ("name", "email", "password_hash") VALUES ($1, $2, $3) ON CONFLICT ("email") DO NOTHING`,
-      ['Super Admin', superAdminEmail, passwordHash]
-    );
+    if (superAdminEmail && superAdminPassword) {
+      const passwordHash = await hashPassword(superAdminPassword);
 
-    // Assign super-admin role to the user
-    await queryRunner.query(
-      `INSERT INTO "user_roles" ("user_id", "role_id")
-       SELECT u.id, r.id FROM "users" u, "roles" r
-       WHERE u.email = $1 AND r.slug = 'super-admin'
-       ON CONFLICT DO NOTHING`,
-      [superAdminEmail]
-    );
+      // Seed super-admin user
+      await queryRunner.query(
+        `INSERT INTO "users" ("name", "email", "password_hash") VALUES ($1, $2, $3) ON CONFLICT ("email") DO NOTHING`,
+        ['Super Admin', superAdminEmail, passwordHash]
+      );
+
+      // Assign super-admin role to the user
+      await queryRunner.query(
+        `INSERT INTO "user_roles" ("user_id", "role_id")
+         SELECT u.id, r.id FROM "users" u, "roles" r
+         WHERE u.email = $1 AND r.slug = 'super-admin'
+         ON CONFLICT DO NOTHING`,
+        [superAdminEmail]
+      );
+    }
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL || 'superadmin@example.com';
+    const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+
+    if (!superAdminEmail) {
+      console.warn('[SeedRolesAndPermissions] SUPER_ADMIN_EMAIL not set — skipping user cleanup');
+    } else {
 
     // Remove super-admin user
     await queryRunner.query(
@@ -110,5 +120,6 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
       `DELETE FROM "permissions" WHERE "slug" IN (${PERMISSIONS.map((p, i) => `$${i + 1}`).join(', ')})`,
       PERMISSIONS
     );
+    }
   }
 }

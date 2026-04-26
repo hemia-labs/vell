@@ -1,4 +1,4 @@
-import { IsArray, IsNotEmpty, IsOptional, IsString, IsUUID } from "class-validator";
+import { IsArray, IsInt, IsNotEmpty, IsOptional, IsString, IsUUID, Min } from "class-validator";
 
 export class CreateRoleDto {
     @IsNotEmpty({ message: 'El nombre del rol es obligatorio' })
@@ -16,6 +16,10 @@ export class CreateRoleDto {
     @IsOptional()
     @IsString( { message: 'El scope del rol debe ser una cadena de texto' })
     scope: string;
+
+    @IsInt({ message: 'El nivel debe ser un número entero' })
+    @Min(0, { message: 'El nivel mínimo es 0' })
+    level: number;
 
     @IsNotEmpty({ message: 'Los permisos son obligatorios' })
     @IsArray({ message: 'Los permisos deben ser un arreglo' })

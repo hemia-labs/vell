@@ -12,6 +12,7 @@ export class RoleMapper {
         roleDto.slug = role.slug;
         roleDto.description = role.description;
         roleDto.scope = role.scope;
+        roleDto.level = role.level;
         roleDto.permissions = role.permissions ? role.permissions.map(permission => ({
             id: permission.id,
             slug: permission.slug,
@@ -20,25 +21,27 @@ export class RoleMapper {
         return roleDto;
     }
 
-    static toEntity(roleDto: CreateRoleDto): Role {
+    static toEntity(roleDto: CreateRoleDto): Partial<Role> {
         const role = new Role();
         role.name = roleDto.name;
         role.slug = roleDto.slug;
         role.description = roleDto.description;
         role.scope = roleDto.scope;
+        role.level = roleDto.level;
         if(roleDto.permissionIds) {
             role.permissions = roleDto.permissionIds.map(id => ({ id } as Permission));
         }
         return role;
     }
 
-    static toUpdateEntity(roleDto: UpdateRoleDto): Role {
-        const role = new Role();
-        role.name = roleDto.name;
-        role.slug = roleDto.slug;
-        role.description = roleDto.description;
-        role.scope = roleDto.scope;
-        if(roleDto.permissionIds) {
+    static toUpdateEntity(roleDto: UpdateRoleDto): Partial<Role> {
+        const role: Partial<Role> = {};
+        if (roleDto.name !== undefined) role.name = roleDto.name;
+        if (roleDto.slug !== undefined) role.slug = roleDto.slug;
+        if (roleDto.description !== undefined) role.description = roleDto.description;
+        if (roleDto.scope !== undefined) role.scope = roleDto.scope;
+        if (roleDto.level !== undefined) role.level = roleDto.level;
+        if (roleDto.permissionIds) {
             role.permissions = roleDto.permissionIds.map(id => ({ id } as Permission));
         }
         return role;

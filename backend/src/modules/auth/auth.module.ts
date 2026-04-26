@@ -21,7 +21,7 @@ import { RefreshTokenModule } from './refresh-token/refresh-token.module';
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET'),
         signOptions: { 
-          expiresIn: configService.get<number>('JWT_EXPIRATION') || 3600
+          expiresIn: configService.get<number>('JWT_EXPIRES_IN') || 3600
         },
       }),
     }),

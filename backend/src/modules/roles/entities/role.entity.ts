@@ -19,10 +19,13 @@ export class Role {
   @Column({ nullable: true })
   scope: string;
 
+  @Column({ type: 'int', default: 99 })
+  level: number;
+
   @ManyToMany(() => User, (user) => user.roles)
   users: User[];
 
-  @ManyToMany(() => Permission, { cascade: true })
+  @ManyToMany(() => Permission)
   @JoinTable({
     name: 'role_permissions',
     joinColumn: { name: 'role_id', referencedColumnName: 'id' },

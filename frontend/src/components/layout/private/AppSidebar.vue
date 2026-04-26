@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import {
-  ChevronDown,
   ClipboardList,
   File,
   FileText,
@@ -135,17 +134,13 @@ const navigationGroups = [
           <SidebarMenuButton size="lg" class="workspace" tooltip="Vell CMS">
             <span class="workspace__logo">V</span>
             <span class="workspace__meta">
-              <span class="workspace__name">Vell CMS</span>
+              <span class="workspace__name">
+                Vell CMS <span class="version-row">- v.{{ appVersion }}</span>
+              </span>
               <span class="workspace__sub">
-                <span class="workspace__role">
-                  <ShieldCheck :size="10" />
-                  {{ currentUserRole }}
-                  <b v-if="currentUserRoleCount">+{{ currentUserRoleCount }}</b>
-                </span>
-                <span class="version-row">v{{ appVersion }}</span>
+                {{ currentUserEmail }}
               </span>
             </span>
-            <ChevronDown class="workspace__chevron" :size="12" />
           </SidebarMenuButton>
         </SidebarMenuItem>
       </SidebarMenu>
@@ -215,7 +210,11 @@ const navigationGroups = [
               <span class="user-row__top">
                 <span class="user-row__name">{{ currentUserName }}</span>
               </span>
-              <span class="user-row__email">{{ currentUserEmail }}</span>
+              <span class="user-row__role">
+                <ShieldCheck :size="10" />
+                {{ currentUserRole }}
+                <b v-if="currentUserRoleCount">+{{ currentUserRoleCount }}</b>
+              </span>
             </span>
             <button class="logout-btn" type="button" aria-label="Cerrar sesión" title="Cerrar sesión" @click="logout">
               <LogOut :size="14" />
@@ -294,6 +293,7 @@ const navigationGroups = [
 }
 
 .version-row {
+  display: inline;
   color: var(--app-sidebar-muted-soft);
   font-family: 'Geist Mono', ui-monospace, monospace;
   font-size: 10px;
@@ -339,10 +339,11 @@ const navigationGroups = [
   flex: none;
   place-items: center;
   border-radius: 7px;
-  background: var(--app-sidebar-primary-bg);
-  color: var(--app-sidebar-primary-fg);
+  background: #050505;
+  color: #fff;
   font-size: 13px;
   font-weight: 600;
+  box-shadow: 0 1px 2px color-mix(in oklab, #000 28%, transparent);
 }
 
 .workspace__meta,
@@ -361,7 +362,7 @@ const navigationGroups = [
 }
 
 .workspace__sub,
-.user-row__email {
+.user-row__role {
   overflow: hidden;
   color: var(--app-sidebar-muted);
   font-size: 11px;
@@ -370,12 +371,10 @@ const navigationGroups = [
 }
 
 .workspace__sub {
-  display: flex;
-  align-items: center;
-  gap: 6px;
+  display: block;
 }
 
-.workspace__role {
+.user-row__role {
   display: inline-flex;
   min-width: 0;
   align-items: center;
@@ -384,15 +383,10 @@ const navigationGroups = [
   color: var(--app-sidebar-muted);
 }
 
-.workspace__role b {
+.user-row__role b {
   color: var(--app-sidebar-muted-soft);
   font-size: 9.5px;
   font-weight: 600;
-}
-
-.workspace__chevron {
-  margin-left: auto;
-  color: var(--app-sidebar-muted-soft);
 }
 
 .nav-item {
@@ -538,7 +532,6 @@ const navigationGroups = [
 }
 
 :global([data-collapsible='icon']) .workspace__meta,
-:global([data-collapsible='icon']) .workspace__chevron,
 :global([data-collapsible='icon']) .version-row,
 :global([data-collapsible='icon']) .env-switch__name,
 :global([data-collapsible='icon']) .env-switch__tag,

@@ -5,7 +5,7 @@ export class RefreshTokenMapper {
     static toDto(entity: RefreshToken): RefreshTokenDto {
         const dto = new RefreshTokenDto();
         dto.id = entity.id;
-        dto.userId = entity.user.id;
+        dto.userId = entity.userId;
         dto.token = entity.token;
         dto.expiresAt = entity.expiresAt;
         dto.revoked = entity.isRevoked;

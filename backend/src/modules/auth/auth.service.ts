@@ -5,8 +5,7 @@ import { RefreshTokenService } from "./refresh-token/refresh-token.service";
 import { ConfigService } from "@nestjs/config";
 import { UserDto } from "../users/dtos/user.dto";
 import { AuthResponseDto } from "./dtos/auth-response.dto";
-import { genSalt, hash } from "bcrypt";
-import { last } from "rxjs";
+import { randomBytes } from "crypto";
 
 @Injectable()
 export class AuthService {
@@ -86,15 +85,14 @@ export class AuthService {
    * @returns Token de refresh generado
    */
   private async generateRefreshToken(userId: string): Promise<string> {
-    const token = await genSalt(20);
-    const tokenHash = await hash(token, 10);
+    const token = randomBytes(32).toString('hex');
 
-    const expiresInSeconds = parseInt(process.env.REFRESH_TOKEN_EXPIRES_IN || '604800', 10);
+    const expiresInSeconds = this.configService.get<number>('REFRESH_TOKEN_EXPIRES_IN') || 604800;
     const expiryDate = new Date(Date.now() + expiresInSeconds * 1000);
 
     await this.refreshTokenService.create({
         userId,
-        token: tokenHash,
+        token,
         expiresAt: expiryDate,
     });
 
@@ -115,50 +113,8 @@ export class AuthService {
           throw new UnauthorizedException('Credenciales inválidas');
         }
 
-        const roles = foundUser.roles?.map(r => r.slug) ?? [];
-        const permissionsSet = new Set<string>();
-        foundUser.roles?.forEach(r => r.permissions?.forEach(p => permissionsSet.add(p.slug)));
-        const permissions = Array.from(permissionsSet);
-        const lastLogin = new Date();
-
-        const newAccessToken = this.jwtService.sign({
-          sub: payload.userId,
-          email: foundUser.email,
-          name: foundUser.name,
-          avatarUrl: foundUser.avatar ?? null,
-          roles,
-          permissions,
-          lastLogin: lastLogin
-        });
-        const newRefreshToken = await this.generateRefreshToken(payload.userId);
-
-        this.usersService.updateLastLogin(payload.userId, lastLogin);
-
-        const isProduction = this.configService.get('NODE_ENV') === 'production';
-        const cookieDomain = this.configService.get('COOKIE_DOMAIN');
-
-        const baseCookie = {
-          httpOnly: true,
-          secure: isProduction,
-          sameSite: (isProduction ? 'strict' : 'lax') as 'strict' | 'lax',
-          domain: cookieDomain || undefined,
-          path: '/',
-        };
-
-      return {
-        accessToken: newAccessToken,
-        refreshToken: newRefreshToken,
-        cookies: {
-          access: {
-            ...baseCookie,
-            maxAge: 1 * 60 * 60 * 1000, // 1 hora
-          },
-          refresh: {
-            ...baseCookie,
-            maxAge: 7 * 24 * 60 * 60 * 1000, // 7 días
-          },
-        },
-      };
+        await this.refreshTokenService.revoke(oldToken);
+        return this.generateAuthTokens(foundUser);
     }
     throw new UnauthorizedException('Refresh token logic needs complete implementation'); 
   }

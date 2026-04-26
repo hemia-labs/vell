@@ -3,8 +3,12 @@ import { LocalAuthGuard } from "@/common/guards/local-auth.guard";
 import { AuthService } from "./auth.service";
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Req, Res, UnauthorizedException, UseGuards, ValidationPipe } from "@nestjs/common";
 import { LoginDto } from "./dtos/login.dto";
-import { Response } from "express";
+import { Request, Response } from "express";
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
+import { UserDto } from "../users/dtos/user.dto";
+
+type RequestWithUser<TUser> = Request & { user: TUser };
+
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(
@@ -16,12 +20,11 @@ export class AuthController {
   @Post('login')
   async login(
     @Body(ValidationPipe) loginDto: LoginDto,
-    @Req() req: Request,   
+    @Req() req: RequestWithUser<UserDto>,
     @Res({ passthrough: true }) 
     response: Response
 ) {
-    const user = (req as any).user;
-    const authResult = await this.authService.generateAuthTokens(user);
+    const authResult = await this.authService.generateAuthTokens(req.user);
 
     response.cookie('access_token', authResult.accessToken, authResult.cookies.access);
     response.cookie('refresh_token', authResult.refreshToken, authResult.cookies.refresh);
@@ -31,7 +34,7 @@ export class AuthController {
 
   @UseGuards(JwtAuthGuard)
   @Get('me')
-  async getProfile(@Req() req: any) {
+  async getProfile(@Req() req: RequestWithUser<Express.User>) {
     const { userId, email, name, avatarUrl, roles, permissions, lastLogin } = req.user;
 
     return {
@@ -53,7 +56,7 @@ export class AuthController {
   @UseGuards(JwtAuthGuard)
   @Post('logout')
   @HttpCode(200)
-  async logout(@Req() req: any, @Res({ passthrough: true }) response: Response) {
+  async logout(@Req() req: RequestWithUser<Express.User>, @Res({ passthrough: true }) response: Response) {
     response.clearCookie('access_token');
     response.clearCookie('refresh_token');
     await this.authService.logout(req.user.userId);
@@ -62,7 +65,7 @@ export class AuthController {
 
   @Post('refresh')
   async refresh(
-    @Req() req: any,
+    @Req() req: Request,
     @Res({ passthrough: true }) response: Response,
   ) {
     const oldRefreshToken = req.cookies['refresh_token'];

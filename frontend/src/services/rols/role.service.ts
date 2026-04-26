@@ -29,12 +29,8 @@ class RoleService extends BaseService {
     return response.data
   }
 
-  async delete(id: string): Promise<void> {
-    await this.client.delete(`${ROLE_ENDPOINT}/${id}`)
-  }
-
-  async hardDelete(id: string): Promise<void> {
-    await this.client.delete(`${ROLE_ENDPOINT}/${id}/hard`)
+  async delete(id: string, mode?: 'hard'): Promise<void> {
+    await this.client.delete(`${ROLE_ENDPOINT}/${id}`, { params: { mode } })
   }
 
   async restore(id: string): Promise<void> {

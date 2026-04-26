@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { User } from "./entities/user.entity";
 import { FindOneOptions, Repository } from "typeorm";
@@ -8,12 +8,16 @@ import { CreateUserDto } from "./dtos/create-user.dto";
 import { UserMapper } from "./mappers/user.mapper";
 import { UpdateUserDto } from "./dtos/update-user.dto";
 import { FilterUserDto } from "./dtos/filter-user.dto";
+import { RolesService } from "../roles/role.service";
+import { ConfigService } from "@nestjs/config";
 
 @Injectable()
 export class UsersService {
   constructor(
     @InjectRepository(User)
-    private userRepository: Repository<User>
+    private userRepository: Repository<User>,
+    private readonly rolesService: RolesService,
+    private readonly configService: ConfigService,
   ) {}
 
 
@@ -31,8 +35,10 @@ export class UsersService {
             throw new ConflictException('El correo electrónico ya está registrado');
         }
 
+        await this.ensureRolesExist(createUserDto.roles);
         const entity = UserMapper.toCreateEntity(createUserDto);
-        const hashedPassword = await hashPassword(password);    
+        const saltRounds = this.configService.get<number>('BCRYPT_SALT_ROUNDS') || 10;
+        const hashedPassword = await hashPassword(password, saltRounds);    
         const newUser = this.userRepository.create({
             ...entity,
             passwordHash: hashedPassword,
@@ -52,11 +58,17 @@ export class UsersService {
     @returns El usuario actualizado convertido a UserDto
     @throws NotFoundException si no se encuentra un usuario con el ID proporcionado
     **/
-    async update(dto: UpdateUserDto, id: string): Promise<UserDto> {
-        const user = await this.userRepository.findOne({ where: { id }, relations: ['roles', 'roles.permissions'] });
+    async update(dto: UpdateUserDto, targetUserId: string, requestingUserId: string): Promise<UserDto> {
+        const user = await this.userRepository.findOne({ where: { id: targetUserId }, relations: ['roles', 'roles.permissions'] });
         if (!user) {
             throw new NotFoundException('User not found');
         }
+
+        if (dto.roles !== undefined) {
+            await this.ensureRolesExist(dto.roles);
+            await this.validateRoleHierarchy(requestingUserId, dto.roles);
+        }
+
         const currentRoleIds = user.roles?.map(role => role.id) ?? [];
         const nextRoleIds = dto.roles;
         const newEntity = UserMapper.toUpdateEntity({ ...dto, roles: undefined });
@@ -67,11 +79,45 @@ export class UsersService {
             await this.userRepository
                 .createQueryBuilder()
                 .relation(User, 'roles')
-                .of(id)
+                .of(targetUserId)
                 .addAndRemove(nextRoleIds, currentRoleIds);
         }
 
-        return this.findById(id);
+        return this.findById(targetUserId);
+    }
+
+    /**
+     * Verifica que el usuario que ejecuta la acción no asigne roles de mayor jerarquía que el suyo.
+     * Menor número de level = mayor privilegio.
+     */
+    private async validateRoleHierarchy(requestingUserId: string, targetRoleIds: string[]): Promise<void> {
+        const requestingUser = await this.userRepository.findOne({
+            where: { id: requestingUserId },
+            relations: ['roles'],
+        });
+
+        if (!requestingUser?.roles?.length) {
+            throw new ForbiddenException('No tienes roles asignados');
+        }
+
+        const requesterMinLevel = Math.min(...requestingUser.roles.map(r => r.level ?? 99));
+
+        if (requesterMinLevel === 0) {
+            return; // super-admin puede asignar cualquier rol
+        }
+
+        const targetRoles = await this.rolesService.findByIds(targetRoleIds);
+
+        const forbiddenRole = targetRoles.find(r => (r.level ?? 99) < requesterMinLevel);
+        if (forbiddenRole) {
+            throw new ForbiddenException(
+                `No puedes asignar el rol "${forbiddenRole.name}" porque tiene mayor jerarquía que tu rol más alto`,
+            );
+        }
+    }
+
+    private async ensureRolesExist(roleIds: string[]): Promise<void> {
+        await this.rolesService.findByIds(roleIds);
     }
 
     /** Elimina un usuario estableciendo su campo isActive a false y su campo deletedAt a la fecha actual.
@@ -84,6 +130,30 @@ export class UsersService {
             throw new NotFoundException('User not found');
         }
         await this.userRepository.update(id, { isActive: false, deletedAt: new Date() });
+    }
+
+    /** Restaura un usuario eliminando suavemente estableciendo su campo isActive a true y su campo deletedAt a null.
+    @param id - ID del usuario a restaurar
+    @throws NotFoundException si no se encuentra un usuario con el ID proporcionado
+    **/
+    async hardDelete(id: string): Promise<void> {
+        const user = await this.userRepository.findOne({ where: { id }, withDeleted: true });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        await this.userRepository.delete(id);
+    }
+
+    /** Restaura un usuario eliminando la fecha de eliminación y estableciendo isActive a true.
+    @param id - ID del usuario a restaurar
+    @throws NotFoundException si no se encuentra un usuario con el ID proporcionado
+    **/
+    async restore(id: string): Promise<void> {
+        const user = await this.userRepository.findOne({ where: { id }, withDeleted: true });
+        if (!user) {
+            throw new NotFoundException('User not found');
+        }
+        await this.userRepository.update(id, { isActive: true, deletedAt: null });
     }
 
     /**
