@@ -4,7 +4,7 @@ import type { TeamUser, UserStatus } from '@/domain/types/user.types'
 
 export const USER_ITEMS_PER_PAGE = 10
 
-export const USER_STATUSES: UserStatus[] = ['Activo', 'Invitado', 'Suspendido']
+export const USER_STATUSES: UserStatus[] = ['Activo', 'Invitado', 'Suspendido', 'Eliminado']
 
 export const USER_STATUS_OPTIONS = USER_STATUSES.map((status) => ({ label: status, value: status }))
 
@@ -30,14 +30,21 @@ export const USER_COLUMNS: VDataTableColumn[] = [
 ]
 
 export function getUserActions(user: TeamUser): VActionMenuAction[] {
+  if (user.deletedAt) {
+    return [
+      { key: 'restore', label: 'Restaurar usuario', permission: 'users:edit' }
+    ]
+  }
+
   return [
-    { key: 'edit', label: 'Editar usuario' },
-    { key: 'roles', label: 'Cambiar roles' },
+    { key: 'edit', label: 'Editar usuario', permission: 'users:edit' },
+    { key: 'roles', label: 'Cambiar roles', permission: 'users:edit' },
     {
       key: user.status === 'Suspendido' ? 'activate' : 'suspend',
       label: user.status === 'Suspendido' ? 'Reactivar usuario' : 'Suspender usuario',
+      permission: 'users:edit',
       danger: user.status !== 'Suspendido'
     },
-    { key: 'delete', label: 'Eliminar usuario', danger: true }
+    { key: 'delete', label: 'Eliminar usuario', permission: 'users:delete', danger: true }
   ]
 }

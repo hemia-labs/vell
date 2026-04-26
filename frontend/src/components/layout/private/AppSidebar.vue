@@ -30,7 +30,10 @@ import {
 } from '@/components/ui/sidebar'
 import { useLogin } from '@/composables/auth/useLogin'
 import { useDarkMode } from '@/composables/theme/useDarkMode'
+import { can, type PermissionRequirement } from '@/lib/authz'
 import { useAuthStore } from '@/stores'
+import type { Component } from 'vue'
+import type { RouteLocationRaw } from 'vue-router'
 import { RouterLink } from 'vue-router'
 import packageJson from '../../../../package.json'
 
@@ -87,38 +90,61 @@ const sidebarStyle = computed(() => {
 const homeNavigation = { label: 'Inicio', icon: LayoutDashboard, to: { name: 'home' } }
 const navItemClass = 'nav-item text-sidebar-accent-foreground'
 
-const navigationGroups = [
+interface NavigationItem {
+  label: string
+  icon: Component
+  to: RouteLocationRaw
+  permission?: PermissionRequirement
+}
+
+interface NavigationGroup {
+  label: string
+  items: NavigationItem[]
+}
+
+const navigationGroups: NavigationGroup[] = [
   {
     label: 'Contenido',
     items: [
-      { label: 'Contenidos', icon: FileText, to: '/content' },
-      { label: 'Páginas', icon: File, to: '/pages' },
-      { label: 'Tipos de Contenido', icon: FolderTree, to: '/content-types' }
+      { label: 'Contenidos', icon: FileText, to: '/content', permission: 'content:view' },
+      { label: 'Páginas', icon: File, to: '/pages', permission: 'pages:view' },
+      { label: 'Tipos de Contenido', icon: FolderTree, to: '/content-types', permission: 'content:*' }
     ]
   },
   {
     label: 'Organización',
     items: [
-      { label: 'Categorías', icon: Tags, to: '/categories' },
-      { label: 'Etiquetas', icon: Tag, to: '/tags' }
+      { label: 'Categorías', icon: Tags, to: '/categories', permission: 'content:*' },
+      { label: 'Etiquetas', icon: Tag, to: '/tags', permission: 'content:*' }
     ]
   },
   {
     label: 'Assets',
     items: [
-      { label: 'Media Library', icon: Images, to: '/media' }
+      { label: 'Media Library', icon: Images, to: '/media', permission: 'media:view' }
     ]
   },
   {
     label: 'Administración',
     items: [
-      { label: 'Usuarios', icon: Users, to: { name: 'users' } },
-      { label: 'Roles y Permisos', icon: ShieldCheck, to: { name: 'roles' } },
-      { label: 'Audit Log', icon: ClipboardList, to: '/audit-log' },
-      { label: 'Ajustes', icon: Settings, to: '/settings' }
+      { label: 'Usuarios', icon: Users, to: { name: 'users' }, permission: 'users:*' },
+      { label: 'Roles y Permisos', icon: ShieldCheck, to: { name: 'roles' }, permission: 'roles:view' },
+      { label: 'Audit Log', icon: ClipboardList, to: '/audit-log', permission: 'audit:view' },
+      { label: 'Ajustes', icon: Settings, to: '/settings', permission: 'settings:view' }
     ]
   }
 ]
+
+const visibleNavigationGroups = computed(() => {
+  const permissions = authStore.currentUser?.authorization.permissions ?? []
+
+  return navigationGroups
+    .map((group) => ({
+      ...group,
+      items: group.items.filter((item) => can(permissions, item.permission))
+    }))
+    .filter((group) => group.items.length > 0)
+})
 </script>
 
 <template>
@@ -169,7 +195,7 @@ const navigationGroups = [
         </SidebarGroupContent>
       </SidebarGroup>
 
-      <SidebarGroup v-for="group in navigationGroups" :key="group.label">
+      <SidebarGroup v-for="group in visibleNavigationGroups" :key="group.label">
         <SidebarGroupLabel class="section-label">{{ group.label }}</SidebarGroupLabel>
         <SidebarGroupContent>
           <SidebarMenu>

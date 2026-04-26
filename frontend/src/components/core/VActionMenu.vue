@@ -10,10 +10,12 @@ import {
   MenubarSeparator,
   MenubarTrigger
 } from '@/components/ui/menubar'
+import type { PermissionRequirement } from '@/lib/authz'
 
 export interface VActionMenuAction {
   key: string
   label: string
+  permission?: PermissionRequirement
   disabled?: boolean
   danger?: boolean
 }

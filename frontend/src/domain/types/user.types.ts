@@ -16,7 +16,7 @@ export interface UpdateUserForm {
   isActive: boolean
 }
 
-export type UserStatus = 'Activo' | 'Invitado' | 'Suspendido'
+export type UserStatus = 'Activo' | 'Invitado' | 'Suspendido' | 'Eliminado'
 
 export type UserPresence = 'online' | 'away' | 'offline' | 'pending'
 
@@ -32,6 +32,7 @@ export interface TeamUser {
   scopeMeta?: string
   scopes: string[]
   status: UserStatus
+  deletedAt: string | null
   lastSeen: string
   lastSeenMeta: string
   presence: UserPresence

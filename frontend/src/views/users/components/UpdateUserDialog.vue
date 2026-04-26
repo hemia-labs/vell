@@ -183,10 +183,10 @@ onMounted(() => {
                     ? 'border-[#b9d8c6] bg-[#e8f2ec] text-[#1f7a4c]'
                     : 'border-[#e0c4c4] bg-[#f4e5e5] text-[#8b2f2f]'"
                 >
-                  {{ updateForm.isActive ? 'Activo' : 'Inactivo' }}
+                  {{ updateForm.isActive ? 'Activo' : 'Suspendido' }}
                 </span>
               </div>
-              <p class="m-0 max-w-[360px] text-[12px] leading-snug text-(--app-muted)">
+              <p class="m-0 max-w-90 text-[12px] leading-snug text-(--app-muted)">
                 {{ updateForm.isActive ? 'El usuario conserva acceso al panel y puede iniciar sesión.' : 'El usuario no podrá iniciar sesión ni operar dentro del panel.' }}
               </p>
             </div>

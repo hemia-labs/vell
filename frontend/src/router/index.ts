@@ -1,6 +1,7 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { authRoutes } from './auth'
 import AuthService from '@/services/auth/auth.service'
+import { can } from '@/lib/authz'
 import { useAuthStore } from '@/stores'
 import PrivateLayout from '@/layouts/private/PrivateLayout.vue'
 
@@ -27,7 +28,8 @@ const router = createRouter({
           component: () => import('@/views/users/UsersListView.vue'),
           meta: {
             title: 'Usuarios',
-            requiresAuth: true
+            requiresAuth: true,
+            permissions: ['users:*']
           }
         },
         {
@@ -36,6 +38,16 @@ const router = createRouter({
           component: () => import('@/views/roles/RolesListView.vue'),
           meta: {
             title: 'Roles',
+            requiresAuth: true,
+            permissions: ['roles:view']
+          }
+        },
+        {
+          path: 'forbidden',
+          name: 'forbidden',
+          component: () => import('@/views/ForbiddenView.vue'),
+          meta: {
+            title: 'Acceso restringido',
             requiresAuth: true
           }
         }
@@ -49,10 +61,19 @@ router.beforeEach(async (to, _from, next) => {
   const authStore = useAuthStore()
   const authService = new AuthService()
   const isLoginRoute = to.name === 'login'
+  const hasRouteAccess = () => {
+    const permissions = authStore.currentUser?.authorization.permissions ?? []
+
+    return can(permissions, to.meta.permissions)
+  }
 
   if (authStore.isAuthenticated) {
     if (isLoginRoute) {
       return next({ path: '/' })
+    }
+
+    if (!hasRouteAccess()) {
+      return next({ name: 'forbidden' })
     }
 
     return next()
@@ -63,6 +84,10 @@ router.beforeEach(async (to, _from, next) => {
     authStore.setUser(user)
     if (isLoginRoute) {
       return next({ path: '/' })
+    }
+
+    if (!hasRouteAccess()) {
+      return next({ name: 'forbidden' })
     }
 
     return next()

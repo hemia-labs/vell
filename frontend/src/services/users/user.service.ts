@@ -28,6 +28,11 @@ class UserService extends BaseService {
   async delete(id: string, mode?: 'hard'): Promise<void> {
     await this.client.delete(`${USER_ENDPOINT}/${id}`, { params: { mode } })
   }
+
+  async restore(id: string): Promise<User> {
+    const response = await this.client.post<User>(`${USER_ENDPOINT}/${id}/restore`)
+    return response.data
+  }
 }
 
 export default UserService

@@ -30,7 +30,10 @@ export class UserMapper {
             }) : [],
             avatar: user.avatarUrl,
             isActive: user.isActive,
-            lastLogin: user.lastLogin
+            lastLogin: user.lastLogin,
+            createdAt: user.createdAt,
+            updatedAt: user.updatedAt,
+            deletedAt: user.deletedAt
         };
     }
 

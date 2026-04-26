@@ -3,6 +3,7 @@ import useVuelidate from '@vuelidate/core'
 import { email, helpers, minLength, required } from '@vuelidate/validators'
 import type { CreateUser, UpdateUser, User } from '@/domain/models/user.model'
 import type { FilterUserParams, UpdateUserForm } from '@/domain/types/user.types'
+import { PASSWORD_REGEX } from '@/lib/password'
 import UserService from '@/services/users/user.service'
 
 const userService = new UserService()
@@ -47,7 +48,11 @@ export function useUserAdministration() {
     ...userRules,
     password: {
       required: helpers.withMessage('La contraseña es requerida', required),
-      minLength: helpers.withMessage('La contraseña debe tener al menos 8 caracteres', minLength(8))
+      minLength: helpers.withMessage('La contraseña debe tener al menos 8 caracteres', minLength(8)),
+      format: helpers.withMessage(
+        'La contraseña debe incluir mayúscula, minúscula, número y símbolo @$!%*?&',
+        helpers.regex(PASSWORD_REGEX)
+      )
     }
   }
   const v$ = useVuelidate(rules, form)
@@ -108,6 +113,26 @@ export function useUserAdministration() {
     })
   }
 
+  async function deleteUser(id: string) {
+    return runAction('No se pudo eliminar el usuario.', async () => {
+      await userService.delete(id)
+      users.value = users.value.map((current) => current.id === id
+        ? { ...current, isActive: false, deletedAt: new Date().toISOString() }
+        : current)
+      return true
+    })
+  }
+
+  async function restoreUser(id: string) {
+    return runAction('No se pudo restaurar el usuario.', async () => {
+      await userService.restore(id)
+      users.value = users.value.map((current) => current.id === id
+        ? { ...current, isActive: true, deletedAt: null }
+        : current)
+      return true
+    })
+  }
+
   async function submitCreateUser() {
     errorMessage.value = ''
 
@@ -165,6 +190,8 @@ export function useUserAdministration() {
     loadUserById,
     createUser,
     updateUser,
+    deleteUser,
+    restoreUser,
     submitCreateUser,
     submitUpdateUser,
     resetCreateUserForm,

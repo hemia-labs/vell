@@ -7,6 +7,9 @@ import {
 } from 'lucide-vue-next'
 import VActionMenu, { type VActionMenuAction } from '@/components/core/VActionMenu.vue'
 import VDataTable, { type VDataTableKey } from '@/components/core/VDataTable.vue'
+import ChangeUserDeletionAlertDialog from './components/ChangeUserDeletionAlertDialog.vue'
+import ChangeUserStatusAlertDialog from './components/ChangeUserStatusAlertDialog.vue'
+import ChangeUserRolesDialog from './components/ChangeUserRolesDialog.vue'
 import CreateUserDialog from './components/CreateUserDialog.vue'
 import UpdateUserDialog from './components/UpdateUserDialog.vue'
 import UserMemberCell from './components/UserMemberCell.vue'
@@ -22,10 +25,12 @@ import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useAuthorization } from '@/composables/auth/useAuthorization'
 import { useUserAdministration } from '@/composables/users/useUserAdministration'
 import type { TeamUser } from '@/domain/types/user.types'
 
-const { users, isLoading, errorMessage, loadUsers } = useUserAdministration()
+const { users, isLoading, errorMessage, loadUsers, updateUser, deleteUser, restoreUser } = useUserAdministration()
+const { can, filterAllowed } = useAuthorization()
 const search = ref('')
 const selectedIds = ref<VDataTableKey[]>([])
 const selectedRoles = ref<string[]>([])
@@ -34,7 +39,15 @@ const selectedGroups = ref<string[]>([])
 const currentPage = ref(1)
 const isCreateUserDialogOpen = ref(false)
 const isUpdateUserDialogOpen = ref(false)
+const isChangeUserRolesDialogOpen = ref(false)
+const isChangeUserStatusDialogOpen = ref(false)
+const isChangeUserDeletionDialogOpen = ref(false)
 const updateUserId = ref<string | null>(null)
+const changeRolesUserId = ref<string | null>(null)
+const changeStatusUserId = ref<string | null>(null)
+const changeDeletionUserId = ref<string | null>(null)
+const nextUserStatus = ref<boolean | null>(null)
+const userDeletionAction = ref<'delete' | 'restore' | null>(null)
 const selectedUserAction = ref<string | null>(null)
 
 const normalizedSearch = computed(() => search.value.trim().toLowerCase())
@@ -42,6 +55,16 @@ const userRows = computed(() => users.value.map(toTeamUser))
 const paginationTotal = computed(() => userRows.value.length)
 const roleOptions = computed(() => toOptions(users.value.flatMap((user) => user.roles.map((role) => role.name))))
 const groupOptions = computed(() => toOptions(users.value.flatMap((user) => user.roles.map((role) => role.scope))))
+const changeRolesUser = computed(() => {
+  return users.value.find((user) => user.id === changeRolesUserId.value) ?? null
+})
+const changeStatusUser = computed(() => {
+  return users.value.find((user) => user.id === changeStatusUserId.value) ?? null
+})
+const changeDeletionUser = computed(() => {
+  return users.value.find((user) => user.id === changeDeletionUserId.value) ?? null
+})
+const hasUserActions = computed(() => can(['users:edit', 'users:delete']))
 
 const filteredUsers = computed(() => {
   return userRows.value.filter((user) =>
@@ -81,6 +104,10 @@ function isString(value: string | null | undefined): value is string {
 }
 
 function handleUserAction(action: VActionMenuAction, user: TeamUser) {
+  if (!can(action.permission)) {
+    return
+  }
+
   selectedUserAction.value = action.key
   selectedIds.value = [user.id]
 
@@ -88,6 +115,61 @@ function handleUserAction(action: VActionMenuAction, user: TeamUser) {
     updateUserId.value = user.id
     isUpdateUserDialogOpen.value = true
   }
+
+  if (action.key === 'roles') {
+    changeRolesUserId.value = user.id
+    isChangeUserRolesDialogOpen.value = true
+  }
+
+  if (action.key === 'suspend' || action.key === 'activate') {
+    changeStatusUserId.value = user.id
+    nextUserStatus.value = action.key === 'activate'
+    isChangeUserStatusDialogOpen.value = true
+  }
+
+  if (action.key === 'delete' || action.key === 'restore') {
+    changeDeletionUserId.value = user.id
+    userDeletionAction.value = action.key
+    isChangeUserDeletionDialogOpen.value = true
+  }
+}
+
+async function submitUserStatusChange() {
+  if (!changeStatusUser.value || nextUserStatus.value === null) {
+    return
+  }
+
+  const updatedUser = await updateUser(changeStatusUser.value.id, {
+    isActive: nextUserStatus.value
+  })
+
+  if (!updatedUser) {
+    return
+  }
+
+  isChangeUserStatusDialogOpen.value = false
+  changeStatusUserId.value = null
+  nextUserStatus.value = null
+  await loadAllUsers()
+}
+
+async function submitUserDeletionChange() {
+  if (!changeDeletionUser.value || !userDeletionAction.value) {
+    return
+  }
+
+  const result = userDeletionAction.value === 'restore'
+    ? await restoreUser(changeDeletionUser.value.id)
+    : await deleteUser(changeDeletionUser.value.id)
+
+  if (!result) {
+    return
+  }
+
+  isChangeUserDeletionDialogOpen.value = false
+  changeDeletionUserId.value = null
+  userDeletionAction.value = null
+  await loadAllUsers()
 }
 
 onMounted(loadAllUsers)
@@ -130,7 +212,7 @@ onMounted(loadAllUsers)
           <RefreshCw :size="14" :class="{ 'animate-spin': isLoading }" />
           Actualizar
         </Button>
-        <Button size="sm" @click="isCreateUserDialogOpen = true">
+        <Button v-can="'users:create'" size="sm" @click="isCreateUserDialogOpen = true">
           <UserPlus :size="14" />
           Nuevo usuario
         </Button>
@@ -160,7 +242,7 @@ onMounted(loadAllUsers)
         :rows="filteredUsers"
         :columns="USER_COLUMNS"
         row-key="id"
-        actions
+        :actions="hasUserActions"
         pagination
         :items-per-page="USER_ITEMS_PER_PAGE"
         :total-items="paginationTotal"
@@ -189,7 +271,7 @@ onMounted(loadAllUsers)
         </template>
         <template #cell-status="{ row: user }">
           <Badge
-            :variant="user.status === 'Suspendido' ? 'destructive' : user.status === 'Invitado' ? 'outline' : 'default'"
+            :variant="user.status === 'Suspendido' || user.status === 'Eliminado' ? 'destructive' : user.status === 'Invitado' ? 'outline' : 'default'"
             :class="'status-' + user.status.toLowerCase()"
           >
             {{ user.status }}
@@ -204,8 +286,9 @@ onMounted(loadAllUsers)
 
         <template #actions="{ row: user }">
           <VActionMenu
+            v-if="filterAllowed(getUserActions(user)).length"
             v-model="selectedUserAction"
-            :actions="getUserActions(user)"
+            :actions="filterAllowed(getUserActions(user))"
             :label="`Acciones para ${user.name}`"
             @select="handleUserAction($event, user)"
           />
@@ -231,6 +314,25 @@ onMounted(loadAllUsers)
       v-model:open="isUpdateUserDialogOpen"
       :user-id="updateUserId"
       @updated="loadAllUsers"
+    />
+    <ChangeUserRolesDialog
+      v-model:open="isChangeUserRolesDialogOpen"
+      :user="changeRolesUser"
+      @updated="loadAllUsers"
+    />
+    <ChangeUserStatusAlertDialog
+      v-model:open="isChangeUserStatusDialogOpen"
+      :user="changeStatusUser"
+      :next-is-active="nextUserStatus"
+      :is-loading="isLoading"
+      @confirm="submitUserStatusChange"
+    />
+    <ChangeUserDeletionAlertDialog
+      v-model:open="isChangeUserDeletionDialogOpen"
+      :user="changeDeletionUser"
+      :action="userDeletionAction"
+      :is-loading="isLoading"
+      @confirm="submitUserDeletionChange"
     />
   </div>
 </template>
@@ -267,5 +369,10 @@ onMounted(loadAllUsers)
 .status-suspendido {
   background: #f4e5e5;
   color: #8b2f2f;
+}
+
+.status-eliminado {
+  background: #ececef;
+  color: #555b66;
 }
 </style>

@@ -252,7 +252,7 @@ export class UsersService {
      * @returns Un User que representa el usuario encontrado, incluyendo sus roles y permisos.
      */
     private async findByEmail(email: string): Promise<User> {
-        return await this.userRepository.findOne({ where: { email }, relations: ['roles', 'roles.permissions'] });
+        return await this.userRepository.findOne({ where: { email, isActive: true }, relations: ['roles', 'roles.permissions'] });
     }
 
     /** Actualiza la fecha del último inicio de sesión de un usuario.

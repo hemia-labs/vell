@@ -6,6 +6,7 @@ export function toTeamUser(user: User, index: number): TeamUser {
   const uniqueRoles = unique(user.roles.map((role) => role.name))
   const uniqueScopes = unique(user.roles.map((role) => role.scope))
   const lastLogin = formatLastLogin(user.lastLogin)
+  const isDeleted = Boolean(user.deletedAt)
 
   return {
     id: user.id,
@@ -18,10 +19,11 @@ export function toTeamUser(user: User, index: number): TeamUser {
     scope: uniqueScopes[0] ?? 'Sin alcance',
     scopeMeta: uniqueScopes.length > 1 ? `+${uniqueScopes.length - 1}` : undefined,
     scopes: uniqueScopes,
-    status: user.isActive ? 'Activo' : 'Suspendido',
+    status: isDeleted ? 'Eliminado' : user.isActive ? 'Activo' : 'Suspendido',
+    deletedAt: user.deletedAt,
     lastSeen: lastLogin.lastSeen,
     lastSeenMeta: lastLogin.lastSeenMeta,
-    presence: user.isActive ? 'offline' : 'pending',
+    presence: user.isActive && !isDeleted ? 'offline' : 'pending',
     avatarClass: getAvatarClass(index)
   }
 }

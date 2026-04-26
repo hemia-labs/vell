@@ -22,6 +22,7 @@ import {
 } from '@/components/ui/select'
 import { useRoles } from '@/composables/roles/useRoles'
 import { useUserAdministration } from '@/composables/users/useUserAdministration'
+import { generatePassword as createRandomPassword } from '@/lib/password'
 
 const open = defineModel<boolean>('open', { default: false })
 const emit = defineEmits<{
@@ -55,10 +56,7 @@ const selectedRolesLabel = computed(() => {
 })
 
 function generatePassword() {
-  const alphabet = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789!@#$%&*'
-  const values = new Uint32Array(16)
-  crypto.getRandomValues(values)
-  v$.value.password.$model = Array.from(values, (value) => alphabet[value % alphabet.length]).join('')
+  v$.value.password.$model = createRandomPassword()
 }
 
 async function submitForm() {

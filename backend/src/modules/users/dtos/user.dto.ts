@@ -6,6 +6,9 @@ export class UserDto {
     roles: UserRoleDto[];
     lastLogin: Date | null;
     isActive: boolean;
+    createdAt: Date;
+    updatedAt: Date;
+    deletedAt: Date | null;
 }
 
 export class UserRoleDto {

@@ -8,6 +8,9 @@ export interface User {
   roles: Role[]
   lastLogin: string | null
   isActive: boolean
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
 }
 
 export interface CreateUser {
