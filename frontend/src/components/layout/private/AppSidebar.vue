@@ -114,7 +114,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Organización',
     items: [
-      { label: 'Categorías', icon: Tags, to: '/categories', permission: 'content:*' },
+      { label: 'Categorías', icon: Tags, to: { name: 'categories' }, permission: 'categories:view' },
       { label: 'Etiquetas', icon: Tag, to: '/tags', permission: 'content:*' }
     ]
   },

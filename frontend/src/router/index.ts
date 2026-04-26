@@ -43,6 +43,16 @@ const router = createRouter({
           }
         },
         {
+          path: 'categories',
+          name: 'categories',
+          component: () => import('@/views/categories/CategoriesListView.vue'),
+          meta: {
+            title: 'Categorías',
+            requiresAuth: true,
+            permissions: ['categories:view']
+          }
+        },
+        {
           path: 'forbidden',
           name: 'forbidden',
           component: () => import('@/views/ForbiddenView.vue'),
