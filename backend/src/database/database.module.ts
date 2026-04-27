@@ -22,6 +22,9 @@ import * as path from 'path';
           ],
           synchronize: false,
           logging: true,
+          extra: {
+            options: '-c timezone=America/Mexico_City',
+          },
         };
       },
     }),

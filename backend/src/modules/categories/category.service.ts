@@ -126,7 +126,8 @@ export class CategoriesService {
   }
 
   async restore(id: string): Promise<void> {
-    await this.ensureExists(id, true);
+    const category = await this.ensureExists(id, true);
+    await this.ensureSlugAvailable(category.slug, id);
     await this.repository.update(id, { deletedAt: null });
   }
 

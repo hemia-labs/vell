@@ -6,4 +6,8 @@ export enum FieldType {
   DATE = 'date',
   IMAGE = 'image',
   FILE = 'file',
+  SELECT = 'select',
+  RELATION = 'relation',
+  JSON = 'json',
+  RICHTEXT = 'richtext',
 }

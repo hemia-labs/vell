@@ -8,10 +8,12 @@ import {
   OneToMany,
   JoinColumn,
   DeleteDateColumn,
+  Index,
 } from 'typeorm';
 import { Content } from '../../contents/entities/content.entity';
 
 @Entity('categories')
+@Index('IDX_categories_slug_active_unique', ['slug'], { unique: true, where: '"deleted_at" IS NULL' })
 export class Category {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -19,7 +21,7 @@ export class Category {
   @Column({ length: 100 })
   name: string;
 
-  @Column({ length: 100, unique: true })
+  @Column({ length: 100 })
   slug: string;
 
   @Column({ type: 'text', nullable: true })

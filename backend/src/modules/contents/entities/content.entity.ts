@@ -49,7 +49,10 @@ export class Content {
   @Column({ name: 'content_type_id', type: 'uuid' })
   contentTypeId: string;
 
-  @ManyToOne(() => ContentType, { onDelete: 'RESTRICT' })
+  @Column({ name: 'content_type_version', default: 1 })
+  contentTypeVersion: number;
+
+  @ManyToOne(() => ContentType, (contentType) => contentType.contents, { onDelete: 'RESTRICT' })
   @JoinColumn({ name: 'content_type_id' })
   contentType: ContentType;
 

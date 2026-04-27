@@ -53,6 +53,56 @@ const router = createRouter({
           }
         },
         {
+          path: 'tags',
+          name: 'tags',
+          component: () => import('@/views/tags/TagsListView.vue'),
+          meta: {
+            title: 'Etiquetas',
+            requiresAuth: true,
+            permissions: ['tags:view']
+          }
+        },
+        {
+          path: 'content-types',
+          name: 'content-types',
+          component: () => import('@/views/content-types/ContentTypesListView.vue'),
+          meta: {
+            title: 'Tipos de contenido',
+            requiresAuth: true,
+            permissions: ['content-types:view']
+          }
+        },
+        {
+          path: 'content-types/new',
+          name: 'content-types-create',
+          component: () => import('@/views/content-types/ContentTypeFormView.vue'),
+          meta: {
+            title: 'Nuevo tipo de contenido',
+            requiresAuth: true,
+            permissions: ['content-types:create']
+          }
+        },
+        {
+          path: 'content-types/:id/edit',
+          name: 'content-types-edit',
+          component: () => import('@/views/content-types/ContentTypeFormView.vue'),
+          meta: {
+            title: 'Editar tipo de contenido',
+            requiresAuth: true,
+            permissions: ['content-types:edit']
+          }
+        },
+        {
+          path: 'content-types/:id',
+          name: 'content-types-detail',
+          component: () => import('@/views/content-types/ContentTypeDetailView.vue'),
+          meta: {
+            title: 'Detalle de tipo de contenido',
+            requiresAuth: true,
+            permissions: ['content-types:view']
+          }
+        },
+        {
           path: 'forbidden',
           name: 'forbidden',
           component: () => import('@/views/ForbiddenView.vue'),

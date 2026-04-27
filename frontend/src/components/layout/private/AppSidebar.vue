@@ -32,6 +32,7 @@ import { useLogin } from '@/composables/auth/useLogin'
 import { useDarkMode } from '@/composables/theme/useDarkMode'
 import { can, type PermissionRequirement } from '@/lib/authz'
 import { useAuthStore } from '@/stores'
+import logoUrl from '@/assets/logo.webp'
 import type { Component } from 'vue'
 import type { RouteLocationRaw } from 'vue-router'
 import { RouterLink } from 'vue-router'
@@ -108,14 +109,14 @@ const navigationGroups: NavigationGroup[] = [
     items: [
       { label: 'Contenidos', icon: FileText, to: '/content', permission: 'content:view' },
       { label: 'Páginas', icon: File, to: '/pages', permission: 'pages:view' },
-      { label: 'Tipos de Contenido', icon: FolderTree, to: '/content-types', permission: 'content:*' }
+      { label: 'Tipos de Contenido', icon: FolderTree, to: { name: 'content-types' }, permission: 'content-types:view' }
     ]
   },
   {
     label: 'Organización',
     items: [
       { label: 'Categorías', icon: Tags, to: { name: 'categories' }, permission: 'categories:view' },
-      { label: 'Etiquetas', icon: Tag, to: '/tags', permission: 'content:*' }
+      { label: 'Etiquetas', icon: Tag, to: { name: 'tags' }, permission: 'tags:view' }
     ]
   },
   {
@@ -158,7 +159,9 @@ const visibleNavigationGroups = computed(() => {
       <SidebarMenu>
         <SidebarMenuItem>
           <SidebarMenuButton size="lg" class="workspace" tooltip="Vell CMS">
-            <span class="workspace__logo">V</span>
+            <span class="workspace__logo">
+              <img :src="logoUrl" alt="Vell CMS" class="workspace__logo-image">
+            </span>
             <span class="workspace__meta">
               <span class="workspace__name">
                 Vell CMS <span class="version-row">- v.{{ appVersion }}</span>
@@ -360,16 +363,21 @@ const visibleNavigationGroups = computed(() => {
 
 .workspace__logo {
   display: grid;
-  width: 26px;
-  height: 26px;
+  width: 35px;
+  height: 35px;
   flex: none;
   place-items: center;
-  border-radius: 7px;
-  background: #050505;
-  color: #fff;
-  font-size: 13px;
-  font-weight: 600;
+  padding: 3px;
+  border-radius: 4px;
+  overflow: hidden;
+  background: white;
   box-shadow: 0 1px 2px color-mix(in oklab, #000 28%, transparent);
+}
+
+.workspace__logo-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .workspace__meta,

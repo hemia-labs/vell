@@ -8,6 +8,8 @@ import { RolesModule } from './modules/roles/role.module';
 import { UsersModule } from './modules/users/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { CategoriesModule } from './modules/categories/category.module';
+import { TagsModule } from './modules/tags/tag.module';
+import { ContentTypesModule } from './modules/content-types/content-type.module';
 
 @Module({
   imports: [
@@ -24,7 +26,9 @@ import { CategoriesModule } from './modules/categories/category.module';
     AuthModule,
     RolesModule,
     UsersModule,
-    CategoriesModule
+    CategoriesModule,
+    TagsModule,
+    ContentTypesModule
   ],
   controllers: [AppController],
   providers: [AppService],

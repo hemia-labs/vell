@@ -3,11 +3,13 @@ import { hashPassword } from "../../common/utils/hash.util";
 
 const PERMISSIONS = [
   '*',
-  'content:*', 'pages:*', 'media:*', 'categories:*', 'users:*', 'settings:*',
+  'content:*', 'content-types:*', 'pages:*', 'media:*', 'categories:*', 'tags:*', 'users:*', 'settings:*',
   'content:view', 'content:create', 'content:edit', 'content:edit:own', 'content:delete',
+  'content-types:view', 'content-types:create', 'content-types:edit', 'content-types:delete',
   'pages:view', 'pages:create', 'pages:edit', 'pages:delete',
   'media:view', 'media:upload', 'media:edit', 'media:delete',
   'categories:view', 'categories:create', 'categories:edit', 'categories:delete',
+  'tags:view', 'tags:create', 'tags:edit', 'tags:delete',
   'users:view', 'users:create', 'users:edit', 'users:delete',
   'roles:view', 'roles:create', 'roles:edit', 'roles:delete',
   'settings:view', 'settings:edit',
@@ -16,10 +18,10 @@ const PERMISSIONS = [
 
 const ROLES = [
   { name: 'super-admin', slug: 'super-admin', description: 'Acceso completo', scope: 'Acceso completo', level: 0, permissions: ['*'] },
-  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', level: 1, permissions: ['content:*', 'pages:*', 'media:*', 'categories:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
-  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', level: 2, permissions: ['content:*', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'categories:view', 'categories:create', 'categories:edit', 'settings:view'] },
-  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', level: 3, permissions: ['content:view', 'content:create', 'content:edit:own', 'media:view', 'media:upload', 'pages:view', 'categories:view'] },
-  { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', level: 4, permissions: ['content:view', 'pages:view', 'media:view', 'categories:view'] },
+  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', level: 1, permissions: ['content:*', 'content-types:*', 'pages:*', 'media:*', 'categories:*', 'tags:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
+  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', level: 2, permissions: ['content:*', 'content-types:view', 'content-types:create', 'content-types:edit', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'categories:view', 'categories:create', 'categories:edit', 'tags:view', 'tags:create', 'tags:edit', 'settings:view'] },
+  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', level: 3, permissions: ['content:view', 'content:create', 'content:edit:own', 'content-types:view', 'media:view', 'media:upload', 'pages:view', 'categories:view', 'tags:view'] },
+  { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', level: 4, permissions: ['content:view', 'content-types:view', 'pages:view', 'media:view', 'categories:view', 'tags:view'] },
 ];
 
 function expandRolePermissions(permissions: string[]): string[] {
