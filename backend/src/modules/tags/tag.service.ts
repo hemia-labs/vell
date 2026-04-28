@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, NotFoundException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
-import { In, Not, Repository } from "typeorm";
+import { EntityManager, In, Not, Repository } from "typeorm";
 import { CreateTagDto } from "./dtos/create-tag.dto";
 import { FilterTagDto } from "./dtos/filter-tag.dto";
 import { TagDto } from "./dtos/tag.dto";
@@ -124,6 +124,24 @@ export class TagsService {
     if (missingIds.length > 0) {
       throw new NotFoundException(`No existen los siguientes tags: ${missingIds.join(', ')}`);
     }
+  }
+
+  async findByIds(ids: string[], manager?: EntityManager): Promise<Tag[]> {
+    const uniqueIds = [...new Set(ids)];
+    if (uniqueIds.length === 0) {
+      return [];
+    }
+
+    const repository = manager?.getRepository(Tag) ?? this.repository;
+    const tags = await repository.findBy({ id: In(uniqueIds) });
+    const foundIds = new Set(tags.map(tag => tag.id));
+    const missingIds = uniqueIds.filter(id => !foundIds.has(id));
+
+    if (missingIds.length > 0) {
+      throw new NotFoundException(`No existen los siguientes tags: ${missingIds.join(', ')}`);
+    }
+
+    return tags;
   }
 
   private async ensureExists(id: string, withDeleted = false): Promise<Tag> {

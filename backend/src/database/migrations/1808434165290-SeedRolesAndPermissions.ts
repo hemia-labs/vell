@@ -4,23 +4,27 @@ import { hashPassword } from "../../common/utils/hash.util";
 const PERMISSIONS = [
   '*',
   'content:*', 'content-types:*', 'pages:*', 'media:*', 'categories:*', 'tags:*', 'users:*', 'settings:*',
-  'content:view', 'content:create', 'content:edit', 'content:edit:own', 'content:delete',
-  'content-types:view', 'content-types:create', 'content-types:edit', 'content-types:delete',
+  'content:view', 'content:create', 'content:edit', 'content:edit:own', 'content:delete', 'content:restore',
+  'content:publish', 'content:unpublish', 'content:archive', 'content:versions:view', 'content:versions:restore',
+  'content:seo:edit', 'content:config:edit', 'content:media:manage',
+  'content-types:view', 'content-types:create', 'content-types:edit', 'content-types:delete', 'content-types:restore',
+  'content-types:versions:view', 'content-types:versions:restore',
   'pages:view', 'pages:create', 'pages:edit', 'pages:delete',
-  'media:view', 'media:upload', 'media:edit', 'media:delete',
-  'categories:view', 'categories:create', 'categories:edit', 'categories:delete',
-  'tags:view', 'tags:create', 'tags:edit', 'tags:delete',
-  'users:view', 'users:create', 'users:edit', 'users:delete',
-  'roles:view', 'roles:create', 'roles:edit', 'roles:delete',
+  'media:view', 'media:upload', 'media:edit', 'media:delete', 'media:restore',
+  'media:attach', 'media:detach', 'media:reorder',
+  'categories:view', 'categories:create', 'categories:edit', 'categories:delete', 'categories:restore', 'categories:move',
+  'tags:view', 'tags:create', 'tags:edit', 'tags:delete', 'tags:restore',
+  'users:view', 'users:create', 'users:edit', 'users:delete', 'users:restore',
+  'roles:view', 'roles:create', 'roles:edit', 'roles:delete', 'roles:assign',
   'settings:view', 'settings:edit',
   'audit:view',
 ];
 
 const ROLES = [
   { name: 'super-admin', slug: 'super-admin', description: 'Acceso completo', scope: 'Acceso completo', level: 0, permissions: ['*'] },
-  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', level: 1, permissions: ['content:*', 'content-types:*', 'pages:*', 'media:*', 'categories:*', 'tags:*', 'users:*', 'roles:view', 'settings:*', 'audit:view'] },
-  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', level: 2, permissions: ['content:*', 'content-types:view', 'content-types:create', 'content-types:edit', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'categories:view', 'categories:create', 'categories:edit', 'tags:view', 'tags:create', 'tags:edit', 'settings:view'] },
-  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', level: 3, permissions: ['content:view', 'content:create', 'content:edit:own', 'content-types:view', 'media:view', 'media:upload', 'pages:view', 'categories:view', 'tags:view'] },
+  { name: 'admin', slug: 'admin', description: 'Acceso administrativo', scope: 'Administración del espacio', level: 1, permissions: ['content:*', 'content-types:*', 'pages:*', 'media:*', 'categories:*', 'tags:*', 'users:*', 'roles:view', 'roles:assign', 'settings:*', 'audit:view'] },
+  { name: 'editor', slug: 'editor', description: 'Acceso como editor de contenido', scope: 'Editor de contenido', level: 2, permissions: ['content:*', 'content-types:view', 'content-types:create', 'content-types:edit', 'content-types:versions:view', 'pages:view', 'pages:create', 'pages:edit', 'media:*', 'categories:view', 'categories:create', 'categories:edit', 'categories:move', 'tags:view', 'tags:create', 'tags:edit', 'settings:view'] },
+  { name: 'author', slug: 'author', description: 'Acceso como autor de contenido', scope: 'Creación de artículos', level: 3, permissions: ['content:view', 'content:create', 'content:edit:own', 'content:versions:view', 'content:seo:edit', 'content:config:edit', 'content:media:manage', 'content-types:view', 'media:view', 'media:upload', 'media:attach', 'media:detach', 'media:reorder', 'pages:view', 'categories:view', 'tags:view'] },
   { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', level: 4, permissions: ['content:view', 'content-types:view', 'pages:view', 'media:view', 'categories:view', 'tags:view'] },
 ];
 

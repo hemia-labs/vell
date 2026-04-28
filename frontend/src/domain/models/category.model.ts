@@ -10,6 +10,8 @@ export interface Category {
   slug: string
   description: string | null
   parentId: string | null
+  path: string
+  depth: number
   parent?: CategoryParent
   children?: Category[]
   createdAt: string

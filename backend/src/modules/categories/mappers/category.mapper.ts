@@ -11,6 +11,8 @@ export class CategoryMapper {
     dto.slug = category.slug;
     dto.description = category.description;
     dto.parentId = category.parentId;
+    dto.path = category.path;
+    dto.depth = category.depth;
     dto.createdAt = category.createdAt;
     dto.updatedAt = category.updatedAt;
 

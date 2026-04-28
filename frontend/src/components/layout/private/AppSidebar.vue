@@ -107,7 +107,7 @@ const navigationGroups: NavigationGroup[] = [
   {
     label: 'Contenido',
     items: [
-      { label: 'Contenidos', icon: FileText, to: '/content', permission: 'content:view' },
+      { label: 'Contenidos', icon: FileText, to: { name: 'contents' }, permission: 'content:view' },
       { label: 'Páginas', icon: File, to: '/pages', permission: 'pages:view' },
       { label: 'Tipos de Contenido', icon: FolderTree, to: { name: 'content-types' }, permission: 'content-types:view' }
     ]

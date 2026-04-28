@@ -10,6 +10,7 @@ import { AuthModule } from './modules/auth/auth.module';
 import { CategoriesModule } from './modules/categories/category.module';
 import { TagsModule } from './modules/tags/tag.module';
 import { ContentTypesModule } from './modules/content-types/content-type.module';
+import { ContentsModule } from './modules/contents/content.module';
 
 @Module({
   imports: [
@@ -28,7 +29,8 @@ import { ContentTypesModule } from './modules/content-types/content-type.module'
     UsersModule,
     CategoriesModule,
     TagsModule,
-    ContentTypesModule
+    ContentTypesModule,
+    ContentsModule
   ],
   controllers: [AppController],
   providers: [AppService],

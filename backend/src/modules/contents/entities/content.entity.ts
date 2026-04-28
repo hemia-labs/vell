@@ -18,6 +18,7 @@ import { Category } from '../../categories/entities/category.entity';
 import { Tag } from '../../tags/entities/tag.entity';
 import { Media } from '../../media/entities/media.entity';
 import { ContentFieldValue } from './content-field-value.entity';
+import { ContentMedia } from './content-media.entity';
 
 export enum ContentStatus {
   DRAFT = 'draft',
@@ -26,7 +27,14 @@ export enum ContentStatus {
 }
 
 @Entity('contents')
-@Index(['slug', 'contentTypeId'], { unique: true })
+@Index('IDX_contents_slug_type_active_unique', ['slug', 'contentTypeId'], { unique: true, where: '"deleted_at" IS NULL' })
+@Index('IDX_contents_status', ['status'])
+@Index('IDX_contents_content_type', ['contentTypeId'])
+@Index('IDX_contents_category', ['categoryId'])
+@Index('IDX_contents_author', ['authorId'])
+@Index('IDX_contents_published_at', ['publishedAt'])
+@Index('IDX_contents_created_at', ['createdAt'])
+@Index('IDX_contents_type_status_published', ['contentTypeId', 'status', 'publishedAt'])
 export class Content {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -39,6 +47,12 @@ export class Content {
 
   @Column({ type: 'jsonb', nullable: true })
   body: Record<string, unknown> | null;
+
+  @Column({ type: 'jsonb', default: {} })
+  seo: Record<string, unknown>;
+
+  @Column({ type: 'jsonb', default: {} })
+  config: Record<string, unknown>;
 
   @Column({ type: 'text', nullable: true })
   excerpt: string | null;
@@ -97,6 +111,9 @@ export class Content {
 
   @OneToMany(() => ContentFieldValue, (fieldValue) => fieldValue.content, { cascade: true })
   fieldValues: ContentFieldValue[];
+
+  @OneToMany(() => ContentMedia, (contentMedia) => contentMedia.content, { cascade: true })
+  mediaItems: ContentMedia[];
 
   @ManyToMany(() => Tag, (tag) => tag.contents)
   @JoinTable({

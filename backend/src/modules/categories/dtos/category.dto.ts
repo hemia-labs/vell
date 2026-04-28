@@ -10,6 +10,8 @@ export class CategoryDto {
   slug: string;
   description: string;
   parentId: string | null;
+  path: string;
+  depth: number;
   parent?: CategoryParentDto;
   children?: CategoryDto[];
   createdAt: Date;

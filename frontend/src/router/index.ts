@@ -43,6 +43,36 @@ const router = createRouter({
           }
         },
         {
+          path: 'contents',
+          name: 'contents',
+          component: () => import('@/views/contents/ContentsListView.vue'),
+          meta: {
+            title: 'Contenidos',
+            requiresAuth: true,
+            permissions: ['content:view']
+          }
+        },
+        {
+          path: 'contents/new',
+          name: 'contents-create',
+          component: () => import('@/views/contents/ContentFormView.vue'),
+          meta: {
+            title: 'Nuevo contenido',
+            requiresAuth: true,
+            permissions: ['content:create']
+          }
+        },
+        {
+          path: 'contents/:id/edit',
+          name: 'contents-edit',
+          component: () => import('@/views/contents/ContentFormView.vue'),
+          meta: {
+            title: 'Editar contenido',
+            requiresAuth: true,
+            permissions: ['content:edit']
+          }
+        },
+        {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/categories/CategoriesListView.vue'),

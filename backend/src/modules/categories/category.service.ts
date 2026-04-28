@@ -88,11 +88,13 @@ export class CategoriesService {
   async create(dto: CreateCategoryDto): Promise<CategoryDto> {
     await this.ensureSlugAvailable(dto.slug);
 
+    let parent: Category | null = null;
     if (dto.parentId) {
-      await this.ensureExists(dto.parentId);
+      parent = await this.ensureExists(dto.parentId);
     }
 
     const entity = CategoryMapper.toEntity(dto);
+    this.assignTreePosition(entity, parent);
     const savedCategory = await this.repository.save(entity);
     return this.findById(savedCategory.id);
   }
@@ -108,8 +110,14 @@ export class CategoriesService {
       await this.validateParent(id, dto.parentId);
     }
 
+    const oldPath = category.path;
+    const nextParent = dto.parentId !== undefined
+      ? await this.findParent(dto.parentId)
+      : await this.findParent(category.parentId);
     const updatedCategory = this.repository.merge(category, CategoryMapper.toUpdateEntity(dto));
+    this.assignTreePosition(updatedCategory, nextParent);
     const savedCategory = await this.repository.save(updatedCategory);
+    await this.rebuildDescendantPaths(savedCategory, oldPath);
     return this.findById(savedCategory.id);
   }
 
@@ -129,6 +137,10 @@ export class CategoriesService {
     const category = await this.ensureExists(id, true);
     await this.ensureSlugAvailable(category.slug, id);
     await this.repository.update(id, { deletedAt: null });
+  }
+
+  async ensureExistsById(id: string): Promise<Category> {
+    return this.ensureExists(id);
   }
 
   private async ensureExists(id: string, withDeleted = false): Promise<Category> {
@@ -198,6 +210,36 @@ export class CategoriesService {
   private async getCategoryBranchIds(categoryId: string, withDeleted = false): Promise<string[]> {
     const descendants = await this.findDescendantIds(categoryId, withDeleted);
     return [categoryId, ...descendants];
+  }
+
+  private async findParent(parentId: string | null | undefined): Promise<Category | null> {
+    if (!parentId) {
+      return null;
+    }
+    return this.ensureExists(parentId);
+  }
+
+  private assignTreePosition(category: Partial<Category>, parent: Category | null): void {
+    category.path = parent ? `${parent.path}/${category.slug}` : `/${category.slug}`;
+    category.depth = parent ? parent.depth + 1 : 0;
+  }
+
+  private async rebuildDescendantPaths(category: Category, oldPath?: string | null): Promise<void> {
+    if (!oldPath || oldPath === category.path) {
+      return;
+    }
+
+    const descendants = await this.repository
+      .createQueryBuilder('category')
+      .where('category.path LIKE :path', { path: `${oldPath}/%` })
+      .orderBy('category.depth', 'ASC')
+      .getMany();
+
+    for (const descendant of descendants) {
+      descendant.path = descendant.path.replace(oldPath, category.path);
+      descendant.depth = descendant.path.split('/').filter(Boolean).length - 1;
+      await this.repository.save(descendant);
+    }
   }
 
 }

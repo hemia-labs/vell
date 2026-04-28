@@ -83,6 +83,19 @@ export class ContentTypesService {
     return this.contentTypeVersionsService.findAll(id);
   }
 
+  async findEntityWithFields(id: string): Promise<ContentType> {
+    const contentType = await this.repository.findOne({
+      where: { id },
+      relations: ['fields'],
+    });
+
+    if (!contentType) {
+      throw new NotFoundException('Content type not found');
+    }
+
+    return contentType;
+  }
+
   async create(dto: CreateContentTypeDto): Promise<ContentTypeDto> {
     await this.ensureNameAvailable(dto.name);
     await this.ensureSlugAvailable(dto.slug);

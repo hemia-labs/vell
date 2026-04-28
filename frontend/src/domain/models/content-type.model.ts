@@ -9,6 +9,7 @@ export interface ContentTypeField {
   fieldKey: string
   fieldType: FieldType
   isRequired: boolean
+  multiple?: boolean
   meta: FieldMeta
   order: number
   createdAt: string
@@ -27,6 +28,7 @@ export interface ContentTypeSchemaSnapshot {
     fieldKey: string
     fieldType: FieldType
     isRequired: boolean
+    multiple?: boolean
     meta: FieldMeta
     order: number
   }>
@@ -58,6 +60,7 @@ export interface CreateContentTypeField {
   fieldKey: string
   fieldType: FieldType
   isRequired?: boolean
+  multiple?: boolean
   meta?: FieldMeta
   order?: number
 }
