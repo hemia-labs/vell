@@ -40,6 +40,16 @@ class ContentService extends BaseService {
     return response.data
   }
 
+  async publish(id: string): Promise<Content> {
+    const response = await this.client.post<Content>(`${CONTENT_ENDPOINT}/${id}/publish`)
+    return response.data
+  }
+
+  async restoreVersion(id: string, version: number): Promise<Content> {
+    const response = await this.client.post<Content>(`${CONTENT_ENDPOINT}/${id}/versions/${version}/restore`)
+    return response.data
+  }
+
   async delete(id: string, mode?: 'hard'): Promise<void> {
     await this.client.delete(`${CONTENT_ENDPOINT}/${id}`, { params: { mode } })
   }

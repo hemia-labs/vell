@@ -10,6 +10,7 @@
     "lint": "eslint . --ext .vue,.js,.jsx,.cjs,.mjs,.ts,.tsx,.cts,.mts --fix --ignore-path .gitignore"
   },
   "dependencies": {
+    "@internationalized/date": "^3.12.1",
     "@tailwindcss/vite": "^4.2.4",
     "@tanstack/vue-table": "^8.21.3",
     "@vuelidate/core": "^2.0.3",

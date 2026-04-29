@@ -18,6 +18,10 @@ export class CreateContentTypeFieldDto {
   isRequired?: boolean;
 
   @IsOptional()
+  @IsBoolean({ message: 'multiple debe ser booleano' })
+  multiple?: boolean;
+
+  @IsOptional()
   @IsObject({ message: 'meta debe ser un objeto JSON' })
   meta?: Record<string, unknown>;
 

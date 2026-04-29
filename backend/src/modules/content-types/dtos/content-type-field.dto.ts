@@ -7,6 +7,7 @@ export class ContentTypeFieldDto {
   fieldKey: string;
   fieldType: FieldType;
   isRequired: boolean;
+  multiple: boolean;
   meta: Record<string, unknown>;
   order: number;
   createdAt: Date;

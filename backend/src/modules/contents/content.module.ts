@@ -3,6 +3,7 @@ import { TypeOrmModule } from "@nestjs/typeorm";
 import { DatabaseModule } from "@/database/database.module";
 import { CategoriesModule } from "../categories/category.module";
 import { ContentTypesModule } from "../content-types/content-type.module";
+import { FileUploadModule } from "../file-upload/file-upload.module";
 import { MediaModule } from "../media/media.module";
 import { TagsModule } from "../tags/tag.module";
 import { ContentFieldValue } from "./entities/content-field-value.entity";
@@ -22,6 +23,7 @@ import { ContentVersionService } from "./content-version.service";
     ContentTypesModule,
     TagsModule,
     MediaModule,
+    FileUploadModule,
     TypeOrmModule.forFeature([
       Content,
       ContentFieldValue,

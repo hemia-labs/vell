@@ -358,6 +358,7 @@ export class ContentTypesService {
           fieldKey: fieldDto.fieldKey,
           fieldType: fieldDto.fieldType,
           isRequired: fieldDto.isRequired ?? false,
+          multiple: fieldDto.multiple ?? Boolean(fieldDto.meta?.multiple),
           meta: fieldDto.meta ?? {},
           order: fieldDto.order ?? fields.indexOf(fieldDto),
         });
@@ -385,11 +386,13 @@ export class ContentTypesService {
 
       const nextOrder = fieldDto.order ?? field.order;
       const nextIsRequired = fieldDto.isRequired ?? false;
+      const nextMultiple = fieldDto.multiple ?? Boolean(fieldDto.meta?.multiple);
       const nextMeta = fieldDto.meta ?? {};
       const fieldChanged = field.name !== fieldDto.name ||
         field.fieldKey !== fieldDto.fieldKey ||
         field.fieldType !== fieldDto.fieldType ||
         field.isRequired !== nextIsRequired ||
+        field.multiple !== nextMultiple ||
         JSON.stringify(field.meta ?? {}) !== JSON.stringify(nextMeta) ||
         field.order !== nextOrder;
 
@@ -402,6 +405,7 @@ export class ContentTypesService {
         fieldKey: fieldDto.fieldKey,
         fieldType: fieldDto.fieldType,
         isRequired: nextIsRequired,
+        multiple: nextMultiple,
         meta: nextMeta,
         order: nextOrder,
       }));
@@ -420,6 +424,7 @@ export class ContentTypesService {
       fieldKey: string;
       fieldType: string;
       isRequired: boolean;
+      multiple?: boolean;
       meta: Record<string, unknown>;
       order: number;
     }>,
@@ -430,6 +435,7 @@ export class ContentTypesService {
       fieldKey: field.fieldKey,
       fieldType: field.fieldType as UpdateContentTypeFieldDto['fieldType'],
       isRequired: field.isRequired,
+      multiple: field.multiple ?? Boolean(field.meta?.multiple),
       meta: field.meta ?? {},
       order: field.order,
     })));
@@ -463,6 +469,7 @@ export class ContentTypesService {
           fieldKey: fieldSnapshot.fieldKey,
           fieldType: fieldSnapshot.fieldType as UpdateContentTypeFieldDto['fieldType'],
           isRequired: fieldSnapshot.isRequired,
+          multiple: fieldSnapshot.multiple ?? Boolean(fieldSnapshot.meta?.multiple),
           meta: fieldSnapshot.meta ?? {},
           order: fieldSnapshot.order,
         }));
@@ -484,6 +491,7 @@ export class ContentTypesService {
         fieldKey: fieldSnapshot.fieldKey,
         fieldType: fieldSnapshot.fieldType as UpdateContentTypeFieldDto['fieldType'],
         isRequired: fieldSnapshot.isRequired,
+        multiple: fieldSnapshot.multiple ?? Boolean(fieldSnapshot.meta?.multiple),
         meta: fieldSnapshot.meta ?? {},
         order: fieldSnapshot.order,
         deletedAt: null,

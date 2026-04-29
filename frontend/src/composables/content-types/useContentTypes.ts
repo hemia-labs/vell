@@ -21,6 +21,7 @@ const createInitialField = (order = 0): CreateContentTypeField => ({
   fieldKey: '',
   fieldType: 'text',
   isRequired: false,
+  multiple: false,
   meta: {},
   order
 })
@@ -228,6 +229,7 @@ export function useContentTypes() {
         fieldKey: field.fieldKey,
         fieldType: field.fieldType,
         isRequired: field.isRequired,
+        multiple: field.multiple ?? Boolean(field.meta?.multiple),
         meta: field.meta ?? {},
         order: field.order
       }))
@@ -246,6 +248,7 @@ export function useContentTypes() {
         fieldKey: field.fieldKey.trim(),
         fieldType: field.fieldType,
         isRequired: field.isRequired ?? false,
+        multiple: field.multiple ?? Boolean(field.meta?.multiple),
         meta: field.meta ?? {},
         order: field.order ?? index
       }))
@@ -263,6 +266,7 @@ export function useContentTypes() {
         fieldKey: field.fieldKey.trim(),
         fieldType: field.fieldType,
         isRequired: field.isRequired ?? false,
+        multiple: field.multiple ?? Boolean(field.meta?.multiple),
         meta: field.meta ?? {},
         order: field.order ?? index
       }))

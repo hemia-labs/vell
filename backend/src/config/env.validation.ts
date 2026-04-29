@@ -15,4 +15,12 @@ export const envVarsSchema = Joi.object({
   REFRESH_TOKEN_EXPIRES_IN: Joi.number().default(604800), // 7 days
   BCRYPT_SALT_ROUNDS: Joi.number().default(10),
   FRONTEND_URL: Joi.string().uri().required(),
+  S3_ENDPOINT: Joi.string().uri().optional().allow(''),
+  S3_REGION: Joi.string().optional().default('us-east-1'),
+  S3_BUCKET: Joi.string().optional().allow(''),
+  S3_ACCESS_KEY_ID: Joi.string().optional().allow(''),
+  S3_SECRET_ACCESS_KEY: Joi.string().optional().allow(''),
+  S3_FORCE_PATH_STYLE: Joi.string().optional().default('false'),
+  S3_PUBLIC_URL: Joi.string().uri().optional().allow(''),
+  S3_PRESIGNED_URL_TTL: Joi.number().optional().default(600),
 });

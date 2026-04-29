@@ -13,9 +13,13 @@ import type {
   JsonObject,
   UpdateContent,
 } from '@/domain/models/content.model'
+import type { ContentTypeField } from '@/domain/models/content-type.model'
+import type { Media } from '@/domain/models/media.model'
 import ContentService from '@/services/contents/content.service'
+import FileUploadService from '@/services/media/file-upload.service'
 
 const contentService = new ContentService()
+const fileUploadService = new FileUploadService()
 
 export const CONTENT_STATUSES: ContentStatus[] = ['draft', 'published', 'archived']
 export const CONTENT_MEDIA_ROLES: ContentMediaRole[] = ['hero', 'gallery', 'attachment', 'inline', 'og_image']
@@ -58,32 +62,48 @@ const createInitialForm = (): ContentForm => ({
   mediaItems: []
 })
 
-const rules = {
-  title: {
-    required: helpers.withMessage('El título es requerido', required),
-    maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
-  },
-  slug: {
-    required: helpers.withMessage('El slug es requerido', required),
-    maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
-  },
-  contentTypeId: {
-    required: helpers.withMessage('El tipo de contenido es requerido', required)
-  },
-  metaTitle: {
-    maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
-  }
-}
-
 export function useContents() {
   const contents = ref<Content[]>([])
   const versions = ref<ContentVersion[]>([])
   const form = ref<ContentForm>(createInitialForm())
   const currentContent = ref<Content | null>(null)
+  const dynamicValidationFields = ref<ContentTypeField[]>([])
   const isLoading = ref(false)
   const errorMessage = ref('')
+  const rules = computed(() => ({
+    title: {
+      required: helpers.withMessage('El título es requerido', required),
+      maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
+    },
+    slug: {
+      required: helpers.withMessage('El slug es requerido', required),
+      maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
+    },
+    contentTypeId: {
+      required: helpers.withMessage('El tipo de contenido es requerido', required)
+    },
+    metaTitle: {
+      maxLength: helpers.withMessage('Máximo 255 caracteres', maxLength(255))
+    },
+    metaDescription: {
+      maxLength: helpers.withMessage('Máximo 170 caracteres', maxLength(170))
+    },
+    fieldValues: {
+      requiredFields: helpers.withMessage('Completa los campos requeridos', validateRequiredDynamicFields)
+    }
+  }))
   const v$ = useVuelidate(rules, form)
   const isFormValid = computed(() => !v$.value.$invalid)
+
+  function validateRequiredDynamicFields(values: ContentFieldValueInput[] = []) {
+    return dynamicValidationFields.value.every((field) => {
+      if (!field.isRequired) {
+        return true
+      }
+
+      return !isEmptyDynamicFieldValue(getFieldValue(values, field))
+    })
+  }
 
   async function runAction<T>(message: string, action: () => Promise<T>): Promise<T | null> {
     isLoading.value = true
@@ -146,6 +166,26 @@ export function useContents() {
     })
   }
 
+  async function publishContent(id: string) {
+    return runAction('No se pudo publicar el contenido.', async () => {
+      const content = await contentService.publish(id)
+      contents.value = contents.value.map((current) => current.id === content.id ? content : current)
+      currentContent.value = content
+      fillForm(content)
+      return content
+    })
+  }
+
+  async function restoreContentVersion(id: string, version: number) {
+    return runAction('No se pudo restaurar la versión del contenido.', async () => {
+      const content = await contentService.restoreVersion(id, version)
+      contents.value = contents.value.map((current) => current.id === content.id ? content : current)
+      currentContent.value = content
+      fillForm(content)
+      return content
+    })
+  }
+
   async function deleteContent(id: string) {
     return runAction('No se pudo eliminar el contenido.', async () => {
       await contentService.delete(id)
@@ -168,7 +208,19 @@ export function useContents() {
       return null
     }
 
-    return createContent(toPayload(form.value))
+    return runAction('No se pudo crear el contenido.', async () => {
+      const uploadedMedia: Media[] = []
+
+      try {
+        const payload = await toUploadResolvedPayload(form.value, uploadedMedia)
+        const content = await contentService.create(payload)
+        contents.value = [content, ...contents.value]
+        return content
+      } catch (error) {
+        await cleanupUploadedMedia(uploadedMedia)
+        throw error
+      }
+    })
   }
 
   async function submitUpdateContent(id: string) {
@@ -178,13 +230,32 @@ export function useContents() {
       return null
     }
 
-    return updateContent(id, toUpdatePayload(form.value))
+    return runAction('No se pudo actualizar el contenido.', async () => {
+      const uploadedMedia: Media[] = []
+
+      try {
+        const payload = await toUploadResolvedPayload(form.value, uploadedMedia)
+        const content = await contentService.update(id, payload)
+        contents.value = contents.value.map((current) => current.id === content.id ? content : current)
+        currentContent.value = content
+        return content
+      } catch (error) {
+        await cleanupUploadedMedia(uploadedMedia)
+        throw error
+      }
+    })
   }
 
   function setFieldValue(fieldKey: string, value: unknown, fieldId?: string) {
     const values = [...(form.value.fieldValues ?? [])]
     const index = values.findIndex((item) => item.fieldKey === fieldKey || (fieldId && item.fieldId === fieldId))
-    const nextValue: ContentFieldValueInput = { fieldKey, fieldId, value }
+    const currentValue = index >= 0 ? values[index] : null
+    const nextValue: ContentFieldValueInput = {
+      fieldKey,
+      fieldId,
+      value,
+      mediaAssets: currentValue?.mediaAssets?.filter(asset => getMediaIdsFromValue(value).includes(asset.id))
+    }
 
     if (index >= 0) {
       values[index] = nextValue
@@ -193,15 +264,38 @@ export function useContents() {
     }
 
     form.value.fieldValues = values
+    v$.value.fieldValues?.$touch()
+  }
+
+  function setDynamicValidationFields(fields: ContentTypeField[] = []) {
+    dynamicValidationFields.value = [...fields]
+  }
+
+  function getDynamicFieldErrors(field: ContentTypeField): string[] {
+    if (!v$.value.fieldValues?.$dirty || !field.isRequired) {
+      return []
+    }
+
+    const value = getFieldValue(form.value.fieldValues, field)
+    return isEmptyDynamicFieldValue(value) ? [`${field.name} es requerido`] : []
   }
 
   function setTagIds(tagIds: string[]) {
     form.value.tagIds = [...new Set(tagIds)]
   }
 
-  function addMediaItem(mediaId: string, role: ContentMediaRole = 'gallery', meta: JsonObject = {}) {
+  function addMediaItem(fileOrMediaId: File | string, metaOrRole: JsonObject | ContentMediaRole = 'gallery', maybeMeta: JsonObject = {}) {
     const mediaItems = [...(form.value.mediaItems ?? [])]
-    mediaItems.push({ mediaId, role, order: mediaItems.length, meta })
+    const isFile = fileOrMediaId instanceof File
+    const role = typeof metaOrRole === 'string' ? metaOrRole : 'gallery'
+    const meta = typeof metaOrRole === 'string' ? maybeMeta : metaOrRole
+    mediaItems.push({
+      mediaId: isFile ? undefined : fileOrMediaId,
+      file: isFile ? fileOrMediaId : undefined,
+      role,
+      order: mediaItems.length,
+      meta
+    })
     form.value.mediaItems = mediaItems
   }
 
@@ -226,6 +320,7 @@ export function useContents() {
   function resetForm() {
     form.value = createInitialForm()
     currentContent.value = null
+    dynamicValidationFields.value = []
     v$.value.$reset()
     errorMessage.value = ''
   }
@@ -249,13 +344,21 @@ export function useContents() {
       fieldValues: (content.fieldValues ?? []).map(fieldValue => ({
         fieldId: fieldValue.fieldId,
         fieldKey: fieldValue.fieldKey,
-        value: fieldValue.value
+        value: fieldValue.value,
+        mediaAssets: fieldValue.mediaAssets
       })),
       mediaItems: (content.mediaItems ?? []).map(mediaItem => ({
         mediaId: mediaItem.mediaId,
         role: mediaItem.role,
         order: mediaItem.order,
-        meta: mediaItem.meta ?? {}
+        meta: {
+          ...(mediaItem.meta ?? {}),
+          originalName: mediaItem.media?.originalName ?? mediaItem.meta?.originalName,
+          mimeType: mediaItem.media?.mimeType ?? mediaItem.meta?.mimeType,
+          size: mediaItem.media?.size ?? mediaItem.meta?.size,
+          url: mediaItem.media?.url ?? mediaItem.meta?.url,
+          previewUrl: mediaItem.media?.previewUrl ?? mediaItem.meta?.previewUrl
+        }
       }))
     }
     v$.value.$reset()
@@ -278,17 +381,123 @@ export function useContents() {
       publishedAt: source.publishedAt || null,
       tagIds: source.tagIds ?? [],
       fieldValues: source.fieldValues ?? [],
-      mediaItems: (source.mediaItems ?? []).map((mediaItem, index) => ({
-        mediaId: mediaItem.mediaId,
-        role: mediaItem.role ?? 'gallery',
-        order: mediaItem.order ?? index,
-        meta: mediaItem.meta ?? {}
-      }))
+      mediaItems: (source.mediaItems ?? [])
+        .filter((mediaItem) => Boolean(mediaItem.mediaId))
+        .map((mediaItem, index) => ({
+          mediaId: String(mediaItem.mediaId),
+          role: mediaItem.role ?? 'gallery',
+          order: mediaItem.order ?? index,
+          meta: mediaItem.meta ?? {}
+        }))
     }
+  }
+
+  async function toUploadResolvedPayload(source: ContentForm, uploadedMedia: Media[]): Promise<CreateContent> {
+    const files = collectPendingFiles(source)
+    const uploadedByFile = new Map<File, Media>()
+
+    if (files.length > 0) {
+      const media = await fileUploadService.uploadBatch(files, 'contents')
+      media.forEach((item, index) => {
+        uploadedByFile.set(files[index], item)
+        uploadedMedia.push(item)
+      })
+    }
+
+    const payload = toPayload(source)
+    payload.fieldValues = resolveFieldValues(source.fieldValues ?? [], uploadedByFile)
+    payload.mediaItems = resolveMediaItems(source.mediaItems ?? [], uploadedByFile)
+    return payload
+  }
+
+  function collectPendingFiles(source: ContentForm): File[] {
+    const files: File[] = []
+    const seen = new Set<File>()
+    const add = (file: File) => {
+      if (!seen.has(file)) {
+        seen.add(file)
+        files.push(file)
+      }
+    }
+
+    for (const fieldValue of source.fieldValues ?? []) {
+      if (fieldValue.value instanceof File) add(fieldValue.value)
+      if (Array.isArray(fieldValue.value)) {
+        fieldValue.value.forEach((item) => {
+          if (item instanceof File) add(item)
+        })
+      }
+    }
+
+    for (const mediaItem of source.mediaItems ?? []) {
+      if (mediaItem.file instanceof File) add(mediaItem.file)
+    }
+
+    return files
+  }
+
+  function resolveFieldValues(values: ContentFieldValueInput[], uploadedByFile: Map<File, Media>): ContentFieldValueInput[] {
+    return values.map((item) => ({
+      fieldId: item.fieldId,
+      fieldKey: item.fieldKey,
+      value: resolveFieldValue(item.value, uploadedByFile)
+    }))
+  }
+
+  function resolveFieldValue(value: unknown, uploadedByFile: Map<File, Media>): unknown {
+    if (value instanceof File) {
+      return uploadedByFile.get(value)?.id ?? value
+    }
+
+    if (Array.isArray(value)) {
+      return value.map((item) => item instanceof File ? uploadedByFile.get(item)?.id ?? item : item)
+    }
+
+    return value
+  }
+
+  function resolveMediaItems(mediaItems: ContentMediaInput[], uploadedByFile: Map<File, Media>): ContentMediaInput[] {
+    return mediaItems
+      .flatMap((mediaItem, index) => {
+        const mediaId = mediaItem.mediaId ?? (mediaItem.file ? uploadedByFile.get(mediaItem.file)?.id : undefined)
+        if (!mediaId) {
+          return []
+        }
+
+        return {
+          mediaId,
+          role: mediaItem.role ?? 'gallery',
+          order: mediaItem.order ?? index,
+          meta: mediaItem.meta ?? {}
+        }
+      })
+  }
+
+  async function cleanupUploadedMedia(uploadedMedia: Media[]): Promise<void> {
+    await Promise.allSettled(uploadedMedia.map((media) => fileUploadService.delete(media.id)))
   }
 
   function toUpdatePayload(source: ContentForm): UpdateContent {
     return toPayload(source)
+  }
+
+  function getMediaIdsFromValue(value: unknown): string[] {
+    if (Array.isArray(value)) {
+      return value.filter((item): item is string => typeof item === 'string')
+    }
+
+    return typeof value === 'string' ? [value] : []
+  }
+
+  function getFieldValue(values: ContentFieldValueInput[], field: ContentTypeField) {
+    return values.find((item) => item.fieldId === field.id || item.fieldKey === field.fieldKey)?.value
+  }
+
+  function isEmptyDynamicFieldValue(value: unknown): boolean {
+    if (value === undefined || value === null) return true
+    if (typeof value === 'string' && value.trim() === '') return true
+    if (Array.isArray(value) && value.length === 0) return true
+    return false
   }
 
   return {
@@ -308,11 +517,15 @@ export function useContents() {
     loadContentVersions,
     createContent,
     updateContent,
+    publishContent,
+    restoreContentVersion,
     deleteContent,
     restoreContent,
     submitCreateContent,
     submitUpdateContent,
     setFieldValue,
+    setDynamicValidationFields,
+    getDynamicFieldErrors,
     setTagIds,
     addMediaItem,
     updateMediaItem,

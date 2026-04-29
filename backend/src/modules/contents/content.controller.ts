@@ -51,6 +51,18 @@ export class ContentsController {
     return this.contentsService.update(id, dto, this.getUserId(request));
   }
 
+  @Post(':id/publish')
+  @Permissions('content:edit')
+  async publish(@Param('id') id: string, @Req() request: Request) {
+    return this.contentsService.publish(id, this.getUserId(request));
+  }
+
+  @Post(':id/versions/:version/restore')
+  @Permissions('content:edit')
+  async restoreVersion(@Param('id') id: string, @Param('version') version: string, @Req() request: Request) {
+    return this.contentsService.restoreVersion(id, Number(version), this.getUserId(request));
+  }
+
   @Delete(':id')
   @Permissions('content:delete')
   async delete(@Param('id') id: string, @Query('mode') mode?: string) {

@@ -1,4 +1,5 @@
 import type { FieldType } from './content-type.model'
+import type { Media } from './media.model'
 
 export type ContentStatus = 'draft' | 'published' | 'archived'
 
@@ -10,10 +11,12 @@ export interface ContentFieldValueInput {
   fieldId?: string
   fieldKey?: string
   value: unknown
+  mediaAssets?: Pick<Media, 'id' | 'filename' | 'originalName' | 'mimeType' | 'size' | 'url' | 'previewUrl'>[]
 }
 
 export interface ContentMediaInput {
-  mediaId: string
+  mediaId?: string
+  file?: File
   role?: ContentMediaRole
   order?: number
   meta?: JsonObject
@@ -26,6 +29,7 @@ export interface ContentFieldValue {
   fieldType: FieldType
   contentTypeVersion: number
   value: unknown
+  mediaAssets?: Pick<Media, 'id' | 'filename' | 'originalName' | 'mimeType' | 'size' | 'url' | 'previewUrl'>[]
 }
 
 export interface ContentMedia {
@@ -34,6 +38,7 @@ export interface ContentMedia {
   role: ContentMediaRole
   order: number
   meta: JsonObject
+  media?: Pick<Media, 'id' | 'filename' | 'originalName' | 'mimeType' | 'size' | 'url' | 'previewUrl'>
 }
 
 export interface Content {
@@ -50,9 +55,12 @@ export interface Content {
   categoryId: string | null
   authorId: string
   coverImageId: string | null
+  coverImage?: Pick<Media, 'id' | 'filename' | 'originalName' | 'mimeType' | 'size' | 'url' | 'previewUrl'> | null
   metaTitle: string | null
   metaDescription: string | null
   publishedAt: string | null
+  publishedVersionId: string | null
+  draftVersionId: string | null
   tagIds?: string[]
   fieldValues?: ContentFieldValue[]
   mediaItems?: ContentMedia[]

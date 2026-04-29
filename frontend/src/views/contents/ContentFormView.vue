@@ -1,12 +1,23 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { AlertCircleIcon, ArrowLeft, CalendarClock, Check, Circle, Eye, FileJson, FolderTree, History, ImagePlus, Link2, Save, Search, SearchCheck, Settings2, SlidersHorizontal } from 'lucide-vue-next'
+import { AlertCircleIcon, ArrowLeft, Check, Circle, Eye, FileJson, FolderTree, History, ImagePlus, Link2, Save, SearchCheck, Settings2, SlidersHorizontal } from 'lucide-vue-next'
+import VDateTimePicker from '@/components/core/VDateTimePicker.vue'
+import VTagSearchCreate from '@/components/core/VTagSearchCreate.vue'
 import { VDropzone } from '@/components/core/dropzone'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Checkbox } from '@/components/ui/checkbox'
 import { Field, FieldContent, FieldError, FieldLabel } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -32,7 +43,11 @@ const {
   loadContentById,
   submitCreateContent,
   submitUpdateContent,
+  publishContent,
+  deleteContent,
   setFieldValue,
+  setDynamicValidationFields,
+  getDynamicFieldErrors,
   setTagIds,
   addMediaItem,
   updateMediaItem,
@@ -41,29 +56,29 @@ const {
 } = useContents()
 const { contentTypes, loadContentTypes } = useContentTypes()
 const { categories, loadCategories } = useCategories()
-const { tags, loadTags } = useTags()
+const { tags, loadTags, createTag } = useTags()
 
 const activeTab = ref('content')
 const seoJson = ref('{}')
-const configJson = ref('{}')
 const isSlugDirty = ref(false)
-const tagSearch = ref('')
+const deleteDialogOpen = ref(false)
 
 const contentId = computed(() => String(route.params.id ?? ''))
 const mode = computed<'create' | 'edit'>(() => contentId.value ? 'edit' : 'create')
 const pageTitle = computed(() => mode.value === 'create' ? 'Nuevo contenido' : 'Editar contenido')
 const selectedContentType = computed(() => contentTypes.value.find(type => type.id === form.value.contentTypeId) ?? null)
 const isContentTypeSelected = computed(() => Boolean(form.value.contentTypeId))
+const isPublishedEditLocked = computed(() => false)
+const canSaveContent = computed(() => !isLoading.value)
+const hasPublishedVersion = computed(() => Boolean(currentContent.value?.publishedVersionId))
+const hasDraftVersion = computed(() => Boolean(currentContent.value?.draftVersionId) || form.value.status === 'draft')
 const selectedCategory = computed(() => categories.value.find(category => category.id === form.value.categoryId) ?? null)
 const selectedTags = computed(() => tags.value.filter(tag => form.value.tagIds.includes(tag.id)))
-const filteredTags = computed(() => {
-  const query = tagSearch.value.trim().toLowerCase()
-  if (!query) {
-    return tags.value.slice(0, 80)
-  }
-  return tags.value
-    .filter(tag => [tag.name, tag.slug].some(value => value.toLowerCase().includes(query)))
-    .slice(0, 80)
+const dynamicFieldErrors = computed(() => {
+  return Object.fromEntries((selectedContentType.value?.fields ?? []).map((field) => [
+    field.fieldKey,
+    getDynamicFieldErrors(field)
+  ]))
 })
 const completionItems = computed(() => [
   { key: 'draft', label: 'Borrador', done: ['draft', 'published', 'archived'].includes(form.value.status) },
@@ -78,13 +93,12 @@ const statusLabels: Record<ContentStatus, string> = {
 }
 
 const seoImageTypes = ['image/jpeg', 'image/png', 'image/webp']
+const templateOptions = ['default', 'case-study', 'landing', 'minimal']
+const themeOptions = ['default', 'light', 'dark', 'brand']
+const heroVariantOptions = ['default', 'compact', 'image', 'none']
 
 watch(() => form.value.seo, (value) => {
   seoJson.value = JSON.stringify(value ?? {}, null, 2)
-}, { deep: true })
-
-watch(() => form.value.config, (value) => {
-  configJson.value = JSON.stringify(value ?? {}, null, 2)
 }, { deep: true })
 
 watch(() => form.value.title, (value) => {
@@ -93,6 +107,10 @@ watch(() => form.value.title, (value) => {
   }
   form.value.slug = slugify(value)
 })
+
+watch(() => selectedContentType.value?.fields ?? [], (fields) => {
+  setDynamicValidationFields(fields)
+}, { immediate: true })
 
 onMounted(async () => {
   resetForm()
@@ -107,7 +125,6 @@ onMounted(async () => {
   }
 
   seoJson.value = JSON.stringify(form.value.seo ?? {}, null, 2)
-  configJson.value = JSON.stringify(form.value.config ?? {}, null, 2)
 })
 
 function updateSeo(value: string) {
@@ -118,11 +135,6 @@ function updateSeo(value: string) {
 function getSeoString(key: string) {
   const value = form.value.seo?.[key]
   return typeof value === 'string' ? value : ''
-}
-
-function getSeoBoolean(key: string, fallback = true) {
-  const value = form.value.seo?.[key]
-  return typeof value === 'boolean' ? value : fallback
 }
 
 function getSeoFiles(key: string) {
@@ -146,9 +158,24 @@ function updateSeoFiles(key: string, files: File[]) {
   setSeoValue(key, files[0] ?? null)
 }
 
-function updateConfig(value: string) {
-  configJson.value = value
-  form.value.config = parseJsonObject(value)
+function getConfigObject(section: string): JsonObject {
+  const value = form.value.config?.[section]
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as JsonObject : {}
+}
+
+function getConfigString(section: string, key: string, fallback = '') {
+  const value = getConfigObject(section)[key]
+  return typeof value === 'string' ? value : fallback
+}
+
+function setConfigValue(section: string, key: string, value: unknown) {
+  form.value.config = {
+    ...(form.value.config ?? {}),
+    [section]: {
+      ...getConfigObject(section),
+      [key]: value
+    }
+  }
 }
 
 function parseJsonObject(value: string): JsonObject {
@@ -158,16 +185,6 @@ function parseJsonObject(value: string): JsonObject {
   } catch {
     return {}
   }
-}
-
-function toggleTag(tagId: string) {
-  const current = new Set(form.value.tagIds ?? [])
-  if (current.has(tagId)) {
-    current.delete(tagId)
-  } else {
-    current.add(tagId)
-  }
-  setTagIds([...current])
 }
 
 function updateSlug(value: string) {
@@ -215,6 +232,19 @@ function formatDateTime(value?: string | null) {
 }
 
 async function submitForm() {
+  if (!canSaveContent.value) {
+    return
+  }
+
+  if (!await v$.value.$validate()) {
+    if (v$.value.fieldValues?.$invalid) {
+      activeTab.value = 'content'
+    }
+    return
+  }
+
+  form.value.status = 'draft'
+
   const result = mode.value === 'create'
     ? await submitCreateContent()
     : await submitUpdateContent(contentId.value)
@@ -224,7 +254,53 @@ async function submitForm() {
   router.push({ name: 'contents' })
 }
 
+async function publishCurrentContent() {
+  if (mode.value !== 'edit' || !contentId.value || isLoading.value) {
+    return
+  }
+
+  if (!await v$.value.$validate()) {
+    if (v$.value.fieldValues?.$invalid) {
+      activeTab.value = 'content'
+    }
+    return
+  }
+
+  form.value.status = 'draft'
+  const draft = await submitUpdateContent(contentId.value)
+  if (!draft) return
+
+  const result = await publishContent(contentId.value)
+  if (!result) return
+  resetForm()
+  router.push({ name: 'contents' })
+}
+
+function openVersionsView() {
+  if (mode.value !== 'edit' || !contentId.value) {
+    return
+  }
+
+  router.push({ name: 'contents-versions', params: { id: contentId.value } })
+}
+
 function cancel() {
+  resetForm()
+  router.push({ name: 'contents' })
+}
+
+async function confirmDeleteContent() {
+  if (mode.value !== 'edit' || !contentId.value || isLoading.value) {
+    return
+  }
+
+  const deleted = await deleteContent(contentId.value)
+
+  if (!deleted) {
+    return
+  }
+
+  deleteDialogOpen.value = false
   resetForm()
   router.push({ name: 'contents' })
 }
@@ -261,9 +337,9 @@ function cancel() {
                     {{ isContentTypeSelected ? `${selectedContentType?.fields?.length ?? 0} campos dinámicos` : 'Selecciona el schema antes de capturar contenido' }}
                   </span>
                 </div>
-                <Button v-if="isContentTypeSelected" type="button" variant="outline" size="sm" class="shrink-0" :disabled="mode === 'create'">
+                <Button v-if="isContentTypeSelected" type="button" variant="outline" size="sm" class="shrink-0" :disabled="mode === 'create' || isLoading" @click="openVersionsView">
                   <History :size="14" />
-                  v{{ selectedContentType?.version ?? 1 }}
+                  Historial
                 </Button>
               </div>
             </div>
@@ -307,12 +383,14 @@ function cancel() {
               <Field>
                 <FieldLabel for="content-title">Título</FieldLabel>
                 <FieldContent>
-                  <Input
-                    id="content-title"
-                    v-model="v$.title.$model"
-                    class="h-auto min-h-14 border-0 bg-transparent px-0 py-2 !text-[32px] font-semibold !leading-[1.12] text-(--app-ink) shadow-none placeholder:text-(--app-muted) focus-visible:ring-0 max-[760px]:!text-[28px]"
-                    placeholder="Añadir título"
-                  />
+	                  <Input
+	                    id="content-title"
+	                    v-model="v$.title.$model"
+	                    class="h-auto min-h-14 border-0 bg-transparent px-0 py-2 !text-[32px] font-semibold !leading-[1.12] text-(--app-ink) shadow-none placeholder:text-(--app-muted) focus-visible:ring-0 max-[760px]:!text-[28px]"
+	                    :disabled="isPublishedEditLocked"
+	                    maxlength="255"
+	                    placeholder="Añadir título"
+	                  />
                   <FieldError :errors="v$.title.$errors.map(error => String(error.$message))" />
                 </FieldContent>
               </Field>
@@ -320,7 +398,7 @@ function cancel() {
               <Field>
                 <FieldLabel>Tipo de contenido</FieldLabel>
                 <FieldContent>
-                  <Select :model-value="form.contentTypeId" @update:model-value="selectContentType(String($event))">
+	                  <Select :model-value="form.contentTypeId" :disabled="isPublishedEditLocked" @update:model-value="selectContentType(String($event))">
                     <SelectTrigger class="h-10 w-full border-(--app-line) bg-(--app-surface)">
                       <SelectValue placeholder="Selecciona tipo de contenido" />
                     </SelectTrigger>
@@ -375,36 +453,22 @@ function cancel() {
         <TabsContent value="content" class="grid gap-4">
           <section class="grid gap-4 rounded-(--app-radius-lg) border border-(--app-line) bg-(--app-surface) p-4 shadow-(--app-shadow)">
             <div class="grid gap-2">
-              <div class="text-[13px] font-medium text-(--app-ink)">Campos del tipo de contenido</div>
-              <ContentDynamicFields :fields="selectedContentType?.fields ?? []" :values="form.fieldValues" @update-value="setFieldValue" />
+	              <ContentDynamicFields
+	                :fields="selectedContentType?.fields ?? []"
+	                :values="form.fieldValues"
+	                :field-errors="dynamicFieldErrors"
+	                :disabled="isPublishedEditLocked"
+	                @update-value="setFieldValue"
+	              />
             </div>
 
-            <div class="grid gap-2">
-              <div class="flex items-center justify-between gap-3">
-                <div class="text-[13px] font-medium text-(--app-ink)">Etiquetas</div>
-                <div class="text-[12px] text-(--app-muted)">{{ selectedTags.length }} seleccionadas</div>
-              </div>
-              <div class="relative">
-                <Search class="absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-(--app-muted)" :size="14" />
-                <Input v-model="tagSearch" class="h-9 border-(--app-line) bg-(--app-surface) pl-8 text-[13px]" placeholder="Buscar etiquetas" />
-              </div>
-              <div class="max-h-44 overflow-y-auto rounded-md border border-(--app-line) bg-(--app-bg) p-2">
-                <div class="flex flex-wrap gap-2">
-                <button
-                  v-for="tag in filteredTags"
-                  :key="tag.id"
-                  type="button"
-                  class="rounded-md border px-2.5 py-1 text-[12px] transition-colors"
-                  :class="form.tagIds.includes(tag.id) ? 'border-(--app-ink) bg-(--app-ink) text-(--app-bg)' : 'border-(--app-line) bg-(--app-surface-2) text-(--app-muted)'"
-                  @click="toggleTag(tag.id)"
-                >
-                  {{ tag.name }}
-                </button>
-                <Badge v-if="!tags.length" variant="outline">Sin etiquetas</Badge>
-                <Badge v-else-if="!filteredTags.length" variant="outline">Sin resultados</Badge>
-                </div>
-              </div>
-            </div>
+            <VTagSearchCreate
+	              :model-value="form.tagIds"
+	              :tags="tags"
+	              :create-tag="createTag"
+	              :disabled="isPublishedEditLocked"
+	              @update:model-value="setTagIds"
+	            />
           </section>
         </TabsContent>
 
@@ -414,18 +478,21 @@ function cancel() {
               <Field>
                 <FieldLabel for="content-meta-title">Meta title</FieldLabel>
                 <FieldContent>
-                  <Input id="content-meta-title" v-model="form.metaTitle" maxlength="255" placeholder="Título para buscadores" />
+	                  <Input id="content-meta-title" v-model="v$.metaTitle.$model" :disabled="isPublishedEditLocked" maxlength="255" placeholder="Título para buscadores" />
                   <div class="mt-1 text-[11.5px] text-(--app-muted)">{{ form.metaTitle.length }}/255</div>
+                  <FieldError :errors="v$.metaTitle.$errors.map(error => String(error.$message))" />
                 </FieldContent>
               </Field>
               <Field>
                 <FieldLabel for="content-canonical-url">Canonical URL</FieldLabel>
                 <FieldContent>
                   <Input
-                    id="content-canonical-url"
-                    :model-value="getSeoString('canonicalUrl')"
-                    placeholder="https://example.com/contenido"
-                    type="url"
+	                    id="content-canonical-url"
+	                    :model-value="getSeoString('canonicalUrl')"
+	                    :disabled="isPublishedEditLocked"
+	                    maxlength="2048"
+	                    placeholder="https://example.com/contenido"
+	                    type="url"
                     @update:model-value="setSeoValue('canonicalUrl', String($event))"
                   />
                 </FieldContent>
@@ -435,34 +502,14 @@ function cancel() {
             <Field>
               <FieldLabel for="content-meta-description">Meta description</FieldLabel>
               <FieldContent>
-                <Textarea id="content-meta-description" v-model="form.metaDescription" class="min-h-24" maxlength="170" placeholder="Resumen corto para resultados de búsqueda" />
+	                <Textarea id="content-meta-description" v-model="v$.metaDescription.$model" class="min-h-24" :disabled="isPublishedEditLocked" maxlength="170" placeholder="Resumen corto para resultados de búsqueda" />
                 <div class="mt-1 text-[11.5px] text-(--app-muted)">{{ form.metaDescription.length }}/170</div>
+                <FieldError :errors="v$.metaDescription.$errors.map(error => String(error.$message))" />
               </FieldContent>
             </Field>
 
-            <div class="grid gap-3 rounded-md border border-(--app-line) bg-(--app-surface) p-3">
-              <div class="text-[13px] font-medium text-(--app-ink)">Robots</div>
-              <div class="grid grid-cols-2 gap-3 max-[640px]:grid-cols-1">
-                <label class="flex items-center gap-2 text-[13px] text-(--app-ink)" for="content-seo-index">
-                  <Checkbox
-                    id="content-seo-index"
-                    :checked="getSeoBoolean('index', true)"
-                    @update:checked="setSeoValue('index', Boolean($event))"
-                  />
-                  Indexar página
-                </label>
-                <label class="flex items-center gap-2 text-[13px] text-(--app-ink)" for="content-seo-follow">
-                  <Checkbox
-                    id="content-seo-follow"
-                    :checked="getSeoBoolean('follow', true)"
-                    @update:checked="setSeoValue('follow', Boolean($event))"
-                  />
-                  Seguir enlaces
-                </label>
-              </div>
-            </div>
-
-            <div class="grid gap-4 rounded-md border border-(--app-line) bg-(--app-surface) p-3">
+            <!--
+            <div class="grid gap-4 rounded-md border border-(--app-line) p-3">
               <div class="text-[13px] font-semibold text-(--app-ink)">Redes sociales</div>
               <div class="text-[12px] font-medium text-(--app-muted)">Facebook / LinkedIn / WhatsApp / Pinterest</div>
               <div class="grid grid-cols-2 gap-4 max-[860px]:grid-cols-1">
@@ -575,11 +622,12 @@ function cancel() {
                 </FieldContent>
               </Field>
             </div>
+            -->
 
             <Field>
               <FieldLabel for="content-seo-json">Schema / SEO JSON</FieldLabel>
               <FieldContent>
-                <Textarea id="content-seo-json" :model-value="seoJson" class="min-h-44 font-mono text-xs" @update:model-value="updateSeo(String($event))" />
+	                <Textarea id="content-seo-json" :model-value="seoJson" class="min-h-44 font-mono text-xs" :disabled="isPublishedEditLocked" maxlength="10000" @update:model-value="updateSeo(String($event))" />
               </FieldContent>
             </Field>
           </section>
@@ -588,9 +636,10 @@ function cancel() {
         <TabsContent value="media">
           <section class="rounded-(--app-radius-lg) border border-(--app-line) bg-(--app-surface) p-4 shadow-(--app-shadow)">
             <ContentMediaManager
-              :media-items="form.mediaItems"
-              :roles="CONTENT_MEDIA_ROLES"
-              @add="addMediaItem('', 'gallery')"
+	              :media-items="form.mediaItems"
+	              :roles="CONTENT_MEDIA_ROLES"
+	              :disabled="isPublishedEditLocked"
+	              @add="addMediaItem"
               @update="updateMediaItem"
               @remove="removeMediaItem"
             />
@@ -599,19 +648,54 @@ function cancel() {
 
         <TabsContent value="config">
           <section class="grid gap-4 rounded-(--app-radius-lg) border border-(--app-line) bg-(--app-surface) p-4 shadow-(--app-shadow)">
-            <Field>
-              <FieldLabel for="content-body">Body JSON avanzado</FieldLabel>
-              <FieldContent>
-                <Textarea id="content-body" :model-value="JSON.stringify(form.body ?? {}, null, 2)" class="min-h-36 font-mono text-xs" @update:model-value="form.body = parseJsonObject(String($event))" />
-              </FieldContent>
-            </Field>
+            <div class="grid gap-4 rounded-md border border-(--app-line) p-4">
+              <div class="text-[13px] font-semibold text-(--app-ink)">Presentación</div>
+              <div class="grid grid-cols-3 gap-4 max-[900px]:grid-cols-1">
+                <Field>
+                  <FieldLabel>Template</FieldLabel>
+                  <FieldContent>
+	                    <Select :model-value="getConfigString('presentation', 'template', 'default')" :disabled="isPublishedEditLocked" @update:model-value="setConfigValue('presentation', 'template', String($event))">
+                      <SelectTrigger class="h-9 w-full border-(--app-line)">
+                        <SelectValue placeholder="Template" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="option in templateOptions" :key="option" :value="option">{{ option }}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
 
-            <Field>
-              <FieldLabel for="content-config-json">Config JSON</FieldLabel>
-              <FieldContent>
-                <Textarea id="content-config-json" :model-value="configJson" class="min-h-56 font-mono text-xs" @update:model-value="updateConfig(String($event))" />
-              </FieldContent>
-            </Field>
+                <Field>
+                  <FieldLabel>Theme</FieldLabel>
+                  <FieldContent>
+	                    <Select :model-value="getConfigString('presentation', 'theme', 'default')" :disabled="isPublishedEditLocked" @update:model-value="setConfigValue('presentation', 'theme', String($event))">
+                      <SelectTrigger class="h-9 w-full border-(--app-line)">
+                        <SelectValue placeholder="Theme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="option in themeOptions" :key="option" :value="option">{{ option }}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
+
+                <Field>
+                  <FieldLabel>Hero variant</FieldLabel>
+                  <FieldContent>
+	                    <Select :model-value="getConfigString('presentation', 'heroVariant', 'default')" :disabled="isPublishedEditLocked" @update:model-value="setConfigValue('presentation', 'heroVariant', String($event))">
+                      <SelectTrigger class="h-9 w-full border-(--app-line)">
+                        <SelectValue placeholder="Hero" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem v-for="option in heroVariantOptions" :key="option" :value="option">{{ option }}</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FieldContent>
+                </Field>
+              </div>
+
+            </div>
+
           </section>
         </TabsContent>
           </Tabs>
@@ -619,10 +703,16 @@ function cancel() {
 
         <aside v-if="isContentTypeSelected" class="sticky top-5 grid gap-4 max-[1040px]:static">
           <section class="rounded-(--app-radius-lg) border border-(--app-line) bg-(--app-surface) p-4 shadow-(--app-shadow)">
-            <div class="mb-3 flex items-center justify-between gap-3">
-              <div class="text-[13px] font-semibold text-(--app-ink)">Publicación</div>
-              <Badge :variant="form.status === 'published' ? 'default' : 'secondary'">{{ statusLabels[form.status] }}</Badge>
-            </div>
+	            <div class="mb-3 flex items-center justify-between gap-3">
+	              <div class="text-[13px] font-semibold text-(--app-ink)">Publicación</div>
+	              <Badge :variant="form.status === 'published' ? 'default' : 'secondary'">{{ statusLabels[form.status] }}</Badge>
+	            </div>
+
+	            <Alert v-if="hasPublishedVersion && hasDraftVersion" class="mb-4">
+	              <AlertCircleIcon />
+	              <AlertTitle>Cambios sin publicar</AlertTitle>
+	              <AlertDescription>El sitio sigue mostrando la última versión publicada hasta que publiques este borrador.</AlertDescription>
+	            </Alert>
 
             <div class="mb-4 grid gap-2">
               <div v-for="item in completionItems" :key="item.key" class="flex items-center gap-2 text-[13px]">
@@ -650,14 +740,24 @@ function cancel() {
               </FieldContent>
             </Field>
 
-            <div class="mt-4 grid grid-cols-2 gap-2">
-              <Button type="button" variant="outline" :disabled="!form.slug" @click="openPreview">
-                <Eye :size="14" />
-                Preview
-              </Button>
-              <Button type="submit" :disabled="isLoading">
-                <Save :size="14" />
-                Guardar
+	            <div class="mt-4 grid grid-cols-2 gap-2">
+	              <Button type="button" variant="outline" :disabled="!form.slug" @click="openPreview">
+	                <Eye :size="14" />
+	                Preview
+	              </Button>
+	              <Button type="submit" :disabled="!canSaveContent">
+	                <Save :size="14" />
+	                Borrador
+	              </Button>
+	              <Button v-if="mode === 'edit'" type="button" class="col-span-2" :disabled="isLoading" @click="publishCurrentContent">
+	                <Save :size="14" />
+	                Publicar versión
+	              </Button>
+	            </div>
+
+            <div v-if="mode === 'edit'" class="mt-4 border-t border-(--app-line) pt-4">
+              <Button type="button" variant="destructive" class="w-full" :disabled="isLoading" @click="deleteDialogOpen = true">
+                Eliminar contenido
               </Button>
             </div>
           </section>
@@ -673,7 +773,7 @@ function cancel() {
               <FieldContent>
                 <div class="relative">
                   <Link2 class="absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-(--app-muted)" :size="14" />
-                  <Input id="content-slug" :model-value="form.slug" class="pl-8" placeholder="mi-contenido" @update:model-value="updateSlug(String($event))" />
+	                  <Input id="content-slug" :model-value="form.slug" class="pl-8" :disabled="isPublishedEditLocked" maxlength="255" placeholder="mi-contenido" @update:model-value="updateSlug(String($event))" />
                 </div>
                 <p class="mt-1 text-[12px] text-(--app-muted)">
                   Se genera automáticamente desde el título. Puedes editarlo manualmente.
@@ -687,7 +787,7 @@ function cancel() {
               <FieldContent>
                 <div class="relative">
                   <FolderTree class="absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-(--app-muted)" :size="14" />
-                  <Select :model-value="form.categoryId ?? 'none'" @update:model-value="form.categoryId = $event === 'none' ? null : String($event)">
+	                  <Select :model-value="form.categoryId ?? 'none'" :disabled="isPublishedEditLocked" @update:model-value="form.categoryId = $event === 'none' ? null : String($event)">
                     <SelectTrigger class="h-9 w-full border-(--app-line) bg-(--app-surface) pl-8">
                       <SelectValue placeholder="Sin categoría" />
                     </SelectTrigger>
@@ -705,25 +805,34 @@ function cancel() {
             <Field>
               <FieldLabel for="content-published-at">Fecha publicación</FieldLabel>
               <FieldContent>
-                <div class="relative">
-                  <CalendarClock class="absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-(--app-muted)" :size="14" />
-                  <Input
-                    id="content-published-at"
-                    :model-value="form.publishedAt ?? ''"
-                    class="pl-8"
-                    type="datetime-local"
-                    @update:model-value="form.publishedAt = String($event) || null"
-                  />
-                </div>
+                <VDateTimePicker
+                  id="content-published-at"
+                  v-model="form.publishedAt"
+                  :disabled="isPublishedEditLocked"
+                  placeholder="Selecciona fecha de publicación"
+                />
+              </FieldContent>
+            </Field>
+
+            <Field>
+              <FieldLabel for="content-expires-at">Fecha expiración</FieldLabel>
+              <FieldContent>
+                <VDateTimePicker
+                  id="content-expires-at"
+                  :model-value="getConfigString('expiration', 'expiresAt') || null"
+                  :disabled="isPublishedEditLocked"
+                  placeholder="Selecciona fecha de expiración"
+                  @update:model-value="setConfigValue('expiration', 'expiresAt', $event)"
+                />
               </FieldContent>
             </Field>
 
             <div class="grid gap-2 text-[12px]">
-              <div class="rounded-md border border-(--app-line) bg-(--app-bg) p-2.5">
+              <div class="rounded-md border border-(--app-line) p-2.5">
                 <div class="text-(--app-muted)">Creación</div>
                 <div class="mt-1 font-medium text-(--app-ink)">{{ formatDateTime(currentContent?.createdAt) }}</div>
               </div>
-              <div class="rounded-md border border-(--app-line) bg-(--app-bg) p-2.5">
+              <div class="rounded-md border border-(--app-line) p-2.5">
                 <div class="text-(--app-muted)">Actualización</div>
                 <div class="mt-1 font-medium text-(--app-ink)">{{ formatDateTime(currentContent?.updatedAt) }}</div>
               </div>
@@ -738,14 +847,24 @@ function cancel() {
           </section>
         </aside>
       </div>
-
-      <div v-if="isContentTypeSelected" class="flex justify-end gap-2">
-        <Button type="button" variant="outline" :disabled="isLoading" @click="cancel">Cancelar</Button>
-        <Button type="submit" :disabled="isLoading">
-          <Save :size="14" />
-          Guardar
-        </Button>
-      </div>
     </form>
+
+    <AlertDialog v-model:open="deleteDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar contenido</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se eliminará {{ currentContent?.title || form.title || 'este contenido' }}. Esta acción lo quitará de la tabla principal.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" :disabled="isLoading" @click="confirmDeleteContent">
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+
   </div>
 </template>

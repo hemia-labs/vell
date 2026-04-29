@@ -105,14 +105,14 @@ function normalizedOptions() {
 
   return options.map((option) => {
     if (typeof option === 'string') {
-      return { text: option, value: option }
+      return { text: option, value: toSnakeCase(option) }
     }
 
     const text = String(option.text ?? option.label ?? option.value ?? '')
 
     return {
       text,
-      value: String(option.value ?? text)
+      value: String(option.value ?? toSnakeCase(text))
     }
   })
 }
@@ -128,7 +128,8 @@ function patchOptions(options: Array<{ text: string; value: string }>) {
 
 function addOption() {
   const nextIndex = normalizedOptions().length + 1
-  patchOptions([...normalizedOptions(), { text: `Opción ${nextIndex}`, value: `option_${nextIndex}` }])
+  const text = `Opción ${nextIndex}`
+  patchOptions([...normalizedOptions(), { text, value: toSnakeCase(text) }])
 }
 
 function updateOption(index: number, key: 'text' | 'value', value: string | number) {
@@ -143,9 +144,19 @@ function updateOption(index: number, key: 'text' | 'value', value: string | numb
   options[index] = {
     ...option,
     [key]: nextValue,
-    value: key === 'text' && option.value === option.text ? nextValue : key === 'value' ? nextValue : option.value
+    value: key === 'text' ? toSnakeCase(nextValue) : nextValue
   }
   patchOptions(options)
+}
+
+function toSnakeCase(value: string) {
+  return value
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '_')
+    .replace(/^_+|_+$/g, '')
 }
 
 function removeOption(index: number) {
@@ -323,15 +334,35 @@ function removeOption(index: number) {
 
     <div v-else-if="fieldType === 'select'" class="grid gap-3">
       <Field>
-        <FieldLabel>Options</FieldLabel>
+        <FieldLabel>Opciones</FieldLabel>
         <FieldContent class="grid gap-2">
           <div
             v-for="(option, index) in normalizedOptions()"
             :key="index"
-            class="grid gap-2 rounded-md border border-(--app-line) bg-(--app-surface-2) p-2 sm:grid-cols-[1fr_1fr_36px]"
+            class="grid gap-2 rounded-md border border-(--app-line) p-2 sm:grid-cols-[1fr_1fr_36px]"
           >
-            <Input :model-value="option.text" placeholder="Publicado" @update:model-value="updateOption(index, 'text', $event)" />
-            <Input :model-value="option.value" placeholder="published" @update:model-value="updateOption(index, 'value', $event)" />
+            <Field>
+              <FieldLabel :for="`select-option-text-${index}`">Texto visible</FieldLabel>
+              <FieldContent>
+                <Input
+                  :id="`select-option-text-${index}`"
+                  :model-value="option.text"
+                  placeholder="Publicado"
+                  @update:model-value="updateOption(index, 'text', $event)"
+                />
+              </FieldContent>
+            </Field>
+            <Field>
+              <FieldLabel :for="`select-option-value-${index}`">Valor guardado</FieldLabel>
+              <FieldContent>
+                <Input
+                  :id="`select-option-value-${index}`"
+                  :model-value="option.value"
+                  placeholder="publicado"
+                  @update:model-value="updateOption(index, 'value', $event)"
+                />
+              </FieldContent>
+            </Field>
             <Button type="button" variant="ghost" size="icon" aria-label="Eliminar opción" @click="removeOption(index)">
               <X :size="14" />
             </Button>
@@ -340,15 +371,15 @@ function removeOption(index: number) {
             <Plus :size="14" />
             Agregar opción
           </Button>
-          <p class="m-0 text-[12px] text-(--app-muted)">Text es lo visible; value es lo guardado. Ejemplo: Publicado / published.</p>
+          <p class="m-0 text-[12px] text-(--app-muted)">El valor guardado se genera automáticamente en snake_case desde el texto visible. Puedes ajustarlo manualmente.</p>
         </FieldContent>
       </Field>
       <Field>
-        <FieldLabel>Default value</FieldLabel>
+        <FieldLabel>Valor por defecto</FieldLabel>
         <FieldContent>
           <Select :model-value="valueOf('defaultValue', '')" @update:model-value="patch('defaultValue', $event)">
             <SelectTrigger class="h-9 w-full border-(--app-line) bg-(--app-surface)">
-              <SelectValue placeholder="Selecciona default" />
+              <SelectValue placeholder="Selecciona valor por defecto" />
             </SelectTrigger>
             <SelectContent>
               <SelectItem v-for="option in normalizedOptions().filter((item) => item.value || item.text)" :key="option.value || option.text" :value="option.value || option.text">

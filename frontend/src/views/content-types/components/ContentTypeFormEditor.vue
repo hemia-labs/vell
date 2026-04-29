@@ -176,7 +176,7 @@ function dropField(index: number) {
           v-for="(field, index) in form.fields"
           :key="field.id ?? index"
           draggable="true"
-          class="grid gap-3 rounded-md border border-(--app-line) bg-(--app-surface-2) p-3 transition-opacity"
+          class="grid gap-3 rounded-md border border-(--app-line) bg-(--app-surface) p-3 transition-opacity"
           :class="{ 'opacity-50': draggingIndex === index }"
           @dragstart="startDrag(index)"
           @dragover.prevent

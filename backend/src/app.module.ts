@@ -11,6 +11,8 @@ import { CategoriesModule } from './modules/categories/category.module';
 import { TagsModule } from './modules/tags/tag.module';
 import { ContentTypesModule } from './modules/content-types/content-type.module';
 import { ContentsModule } from './modules/contents/content.module';
+import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { MediaModule } from './modules/media/media.module';
 
 @Module({
   imports: [
@@ -30,7 +32,9 @@ import { ContentsModule } from './modules/contents/content.module';
     CategoriesModule,
     TagsModule,
     ContentTypesModule,
-    ContentsModule
+    ContentsModule,
+    MediaModule,
+    FileUploadModule
   ],
   controllers: [AppController],
   providers: [AppService],

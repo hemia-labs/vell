@@ -100,6 +100,12 @@ export class Content {
   @Column({ name: 'published_at', type: 'timestamp', nullable: true })
   publishedAt: Date | null;
 
+  @Column({ name: 'published_version_id', type: 'uuid', nullable: true })
+  publishedVersionId: string | null;
+
+  @Column({ name: 'draft_version_id', type: 'uuid', nullable: true })
+  draftVersionId: string | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 

@@ -73,6 +73,16 @@ const router = createRouter({
           }
         },
         {
+          path: 'contents/:id/versions',
+          name: 'contents-versions',
+          component: () => import('@/views/contents/ContentVersionsView.vue'),
+          meta: {
+            title: 'Versiones de contenido',
+            requiresAuth: true,
+            permissions: ['content:versions:view']
+          }
+        },
+        {
           path: 'categories',
           name: 'categories',
           component: () => import('@/views/categories/CategoriesListView.vue'),
@@ -90,6 +100,16 @@ const router = createRouter({
             title: 'Etiquetas',
             requiresAuth: true,
             permissions: ['tags:view']
+          }
+        },
+        {
+          path: 'media',
+          name: 'media-library',
+          component: () => import('@/views/media/MediaLibraryView.vue'),
+          meta: {
+            title: 'Media Library',
+            requiresAuth: true,
+            permissions: ['media:view']
           }
         },
         {

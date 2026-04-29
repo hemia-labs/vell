@@ -121,6 +121,10 @@ export class ContentFieldValueService {
       case FieldType.IMAGE:
       case FieldType.FILE:
       case FieldType.RELATION:
+        if (this.isMultiple(field)) {
+          if (!Array.isArray(value) || value.some(item => typeof item !== 'string' || !isUUID(item, '4'))) throw invalid();
+          break;
+        }
         if (typeof value !== 'string' || !isUUID(value, '4')) throw invalid();
         break;
       case FieldType.JSON:
@@ -136,5 +140,9 @@ export class ContentFieldValueService {
     if (typeof value === 'string' && value.trim() === '') return true;
     if (Array.isArray(value) && value.length === 0) return true;
     return false;
+  }
+
+  private isMultiple(field: ContentTypeField): boolean {
+    return field.multiple === true || field.meta?.multiple === true;
   }
 }

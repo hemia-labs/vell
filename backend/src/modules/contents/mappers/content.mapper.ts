@@ -17,9 +17,19 @@ export class ContentMapper {
     dto.categoryId = content.categoryId;
     dto.authorId = content.authorId;
     dto.coverImageId = content.coverImageId;
+    dto.coverImage = content.coverImage ? {
+      id: content.coverImage.id,
+      filename: content.coverImage.filename,
+      originalName: content.coverImage.originalName,
+      mimeType: content.coverImage.mimeType,
+      size: content.coverImage.size,
+      url: content.coverImage.url,
+    } : null;
     dto.metaTitle = content.metaTitle;
     dto.metaDescription = content.metaDescription;
     dto.publishedAt = content.publishedAt;
+    dto.publishedVersionId = content.publishedVersionId;
+    dto.draftVersionId = content.draftVersionId;
     dto.createdAt = content.createdAt;
     dto.updatedAt = content.updatedAt;
 
@@ -45,6 +55,14 @@ export class ContentMapper {
         role: mediaItem.role,
         order: mediaItem.order,
         meta: mediaItem.meta ?? {},
+        media: mediaItem.media ? {
+          id: mediaItem.media.id,
+          filename: mediaItem.media.filename,
+          originalName: mediaItem.media.originalName,
+          mimeType: mediaItem.media.mimeType,
+          size: mediaItem.media.size,
+          url: mediaItem.media.url,
+        } : undefined,
       }));
     }
 

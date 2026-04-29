@@ -38,6 +38,9 @@ export class ContentTypeField {
   @Column({ name: 'is_required', default: false })
   isRequired: boolean;
 
+  @Column({ default: false })
+  multiple: boolean;
+
   @Column({ type: 'jsonb', default: {} })
   meta: Record<string, unknown>;
 

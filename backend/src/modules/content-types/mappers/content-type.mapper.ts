@@ -25,6 +25,7 @@ export class ContentTypeMapper {
           fieldKey: field.fieldKey,
           fieldType: field.fieldType,
           isRequired: field.isRequired,
+          multiple: field.multiple ?? Boolean(field.meta?.multiple),
           meta: field.meta ?? {},
           order: field.order,
           createdAt: field.createdAt,
@@ -47,6 +48,7 @@ export class ContentTypeMapper {
       field.fieldKey = fieldDto.fieldKey;
       field.fieldType = fieldDto.fieldType;
       field.isRequired = fieldDto.isRequired ?? false;
+      field.multiple = fieldDto.multiple ?? Boolean(fieldDto.meta?.multiple);
       field.meta = fieldDto.meta ?? {};
       field.order = fieldDto.order ?? index;
       return field;

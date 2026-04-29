@@ -1,6 +1,16 @@
 import { ContentStatus } from "../entities/content.entity";
 import { ContentMediaRole } from "../entities/content-media.entity";
 
+export class ContentMediaAssetDto {
+  id: string;
+  filename: string;
+  originalName: string;
+  mimeType: string;
+  size: number;
+  url: string;
+  previewUrl?: string;
+}
+
 export class ContentFieldValueDto {
   id: string;
   fieldId: string;
@@ -8,6 +18,7 @@ export class ContentFieldValueDto {
   fieldType: string;
   contentTypeVersion: number;
   value: unknown;
+  mediaAssets?: ContentMediaAssetDto[];
 }
 
 export class ContentMediaDto {
@@ -16,6 +27,7 @@ export class ContentMediaDto {
   role: ContentMediaRole;
   order: number;
   meta: Record<string, unknown>;
+  media?: ContentMediaAssetDto;
 }
 
 export class ContentDto {
@@ -32,9 +44,12 @@ export class ContentDto {
   categoryId: string | null;
   authorId: string;
   coverImageId: string | null;
+  coverImage?: ContentMediaAssetDto | null;
   metaTitle: string | null;
   metaDescription: string | null;
   publishedAt: Date | null;
+  publishedVersionId: string | null;
+  draftVersionId: string | null;
   tagIds?: string[];
   fieldValues?: ContentFieldValueDto[];
   mediaItems?: ContentMediaDto[];

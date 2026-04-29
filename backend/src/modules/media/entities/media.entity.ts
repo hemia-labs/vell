@@ -25,6 +25,9 @@ export class Media {
   @Column({ length: 255 })
   filename: string;
 
+  @Column({ name: 'storage_key', type: 'text', nullable: true })
+  storageKey: string | null;
+
   @Column({ name: 'original_name', length: 255 })
   originalName: string;
 
@@ -40,8 +43,8 @@ export class Media {
   @Column({ type: 'enum', enum: StorageType })
   storage: StorageType;
 
-  @Column({ name: 'uploaded_by', type: 'uuid' })
-  uploadedById: string;
+  @Column({ name: 'uploaded_by', type: 'uuid', nullable: true })
+  uploadedById: string | null;
 
   @ManyToOne(() => User, { onDelete: 'SET NULL' })
   @JoinColumn({ name: 'uploaded_by' })
