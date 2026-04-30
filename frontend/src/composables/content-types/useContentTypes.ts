@@ -15,6 +15,7 @@ import ContentTypeService from '@/services/content-types/content-type.service'
 const contentTypeService = new ContentTypeService()
 
 export const FIELD_TYPES: FieldType[] = ['text', 'textarea', 'number', 'boolean', 'date', 'image', 'file', 'select', 'relation', 'json', 'richtext']
+export const CONTENT_TYPE_FIELD_TYPES: FieldType[] = FIELD_TYPES.filter(type => type !== 'relation' && type !== 'json')
 
 const createInitialField = (order = 0): CreateContentTypeField => ({
   name: '',

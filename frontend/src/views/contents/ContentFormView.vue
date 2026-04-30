@@ -27,6 +27,7 @@ import { useCategories } from '@/composables/categories/useCategories'
 import { useContentTypes } from '@/composables/content-types/useContentTypes'
 import { CONTENT_MEDIA_ROLES, CONTENT_STATUSES, useContents } from '@/composables/contents/useContents'
 import { useTags } from '@/composables/tags/useTags'
+import { useAuthorization } from '@/composables/auth/useAuthorization'
 import type { ContentStatus, JsonObject } from '@/domain/models/content.model'
 import ContentDynamicFields from './components/ContentDynamicFields.vue'
 import ContentMediaManager from './components/ContentMediaManager.vue'
@@ -57,6 +58,7 @@ const {
 const { contentTypes, loadContentTypes } = useContentTypes()
 const { categories, loadCategories } = useCategories()
 const { tags, loadTags, createTag } = useTags()
+const { can } = useAuthorization()
 
 const activeTab = ref('content')
 const seoJson = ref('{}')
@@ -70,6 +72,7 @@ const selectedContentType = computed(() => contentTypes.value.find(type => type.
 const isContentTypeSelected = computed(() => Boolean(form.value.contentTypeId))
 const isPublishedEditLocked = computed(() => false)
 const canSaveContent = computed(() => !isLoading.value)
+const canPublishContent = computed(() => can('content:publish'))
 const hasPublishedVersion = computed(() => Boolean(currentContent.value?.publishedVersionId))
 const hasDraftVersion = computed(() => Boolean(currentContent.value?.draftVersionId) || form.value.status === 'draft')
 const selectedCategory = computed(() => categories.value.find(category => category.id === form.value.categoryId) ?? null)
@@ -252,6 +255,30 @@ async function submitForm() {
   if (!result) return
   resetForm()
   router.push({ name: 'contents' })
+}
+
+async function submitAndPublish() {
+  if (!canPublishContent.value || !canSaveContent.value) {
+    return
+  }
+
+  if (!await v$.value.$validate()) {
+    if (v$.value.fieldValues?.$invalid) {
+      activeTab.value = 'content'
+    }
+    return
+  }
+
+  if (mode.value === 'create') {
+    form.value.status = 'published'
+    const result = await submitCreateContent()
+    if (!result) return
+    resetForm()
+    router.push({ name: 'contents' })
+    return
+  }
+
+  await publishCurrentContent()
 }
 
 async function publishCurrentContent() {
@@ -749,9 +776,9 @@ async function confirmDeleteContent() {
 	                <Save :size="14" />
 	                Borrador
 	              </Button>
-	              <Button v-if="mode === 'edit'" type="button" class="col-span-2" :disabled="isLoading" @click="publishCurrentContent">
+	              <Button v-if="canPublishContent" type="button" class="col-span-2" :disabled="isLoading" @click="submitAndPublish">
 	                <Save :size="14" />
-	                Publicar versión
+	                {{ mode === 'create' ? 'Guardar y publicar' : 'Publicar versión' }}
 	              </Button>
 	            </div>
 

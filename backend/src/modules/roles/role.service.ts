@@ -91,7 +91,7 @@ export class RolesService {
         await this.ensurePermissionsExist(dto.permissionIds);
         const entity = RoleMapper.toEntity(dto);
         const savedRole = await this.repository.save(entity);
-        return RoleMapper.toDTO(savedRole);
+        return this.findById(savedRole.id);
     }
 
     /**
@@ -111,7 +111,7 @@ export class RolesService {
         }
         const updatedRole = this.repository.merge(role, RoleMapper.toUpdateEntity(dto));
         const savedRole = await this.repository.save(updatedRole);
-        return RoleMapper.toDTO(savedRole);
+        return this.findById(savedRole.id);
     }
 
     /**

@@ -10,6 +10,7 @@ export interface Role {
   slug: string
   description: string | null
   scope: string | null
+  level: number
   permissions: RolePermission[]
 }
 
@@ -18,6 +19,7 @@ export interface CreateRole {
   slug: string
   description?: string
   scope?: string
+  level: number
   permissionIds: string[]
 }
 

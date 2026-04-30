@@ -22,7 +22,7 @@ import {
 import { Switch } from '@/components/ui/switch'
 import { Textarea } from '@/components/ui/textarea'
 import type { CreateContentType, CreateContentTypeField, FieldType } from '@/domain/models/content-type.model'
-import { FIELD_TYPES } from '@/composables/content-types/useContentTypes'
+import { CONTENT_TYPE_FIELD_TYPES } from '@/composables/content-types/useContentTypes'
 import ContentTypeFieldMetaEditor from './ContentTypeFieldMetaEditor.vue'
 import { toContentTypeSlug } from '../utils/content-type-slug'
 
@@ -229,7 +229,7 @@ function dropField(index: number) {
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem v-for="type in FIELD_TYPES" :key="type" :value="type">
+                    <SelectItem v-for="type in CONTENT_TYPE_FIELD_TYPES" :key="type" :value="type">
                       {{ fieldLabels[type] }}
                     </SelectItem>
                   </SelectContent>

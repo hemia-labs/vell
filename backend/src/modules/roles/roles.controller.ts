@@ -1,6 +1,7 @@
 import { AuthGuard } from "@/common/guards/auth.guard";
 import { JwtAuthGuard } from "@/common/guards/jwt-auth.guard";
-import { Body, ClassSerializerInterceptor, Controller, Delete, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
+import { Body, ClassSerializerInterceptor, Controller, Delete, ForbiddenException, Get, HttpCode, HttpStatus, Param, Post, Put, Query, UseGuards, UseInterceptors, ValidationPipe } from "@nestjs/common";
+import { ConfigService } from "@nestjs/config";
 import { RolesService } from "./role.service";
 import { Permissions } from "@/common/decorators/permissions.decorator";
 import { CreateRoleDto } from "./dtos/create-role.dto";
@@ -13,7 +14,10 @@ import { FilterRoleDto } from "./dtos/filter-role.dto";
 @UseGuards(JwtAuthGuard, AuthGuard)
 export class RolesController {
 
-    constructor(private readonly rolesService: RolesService) {}
+    constructor(
+        private readonly rolesService: RolesService,
+        private readonly configService: ConfigService,
+    ) {}
 
     @Get()
     @Permissions('roles:view')
@@ -37,18 +41,21 @@ export class RolesController {
     @Permissions('roles:create')
     @HttpCode(HttpStatus.CREATED)
     async create(@Body(ValidationPipe) dto: CreateRoleDto) {
+        this.ensureRoleWritesEnabled();
         return await this.rolesService.create(dto);
     }
 
     @Put(':id')
     @Permissions('roles:edit')
     async update(@Param('id') id: string, @Body(ValidationPipe) dto: UpdateRoleDto) {
+        this.ensureRoleWritesEnabled();
         return await this.rolesService.update(id, dto);
     }
 
     @Delete(':id')
     @Permissions('roles:delete')
     async delete(@Param('id') id: string, @Query('mode') mode?: string) {
+        this.ensureRoleWritesEnabled();
         if (mode === 'hard') {
             return await this.rolesService.hardDelete(id);
         }
@@ -58,7 +65,14 @@ export class RolesController {
     @Post(':id/restore')
     @Permissions('roles:edit')
     async restore(@Param('id') id: string) {
+        this.ensureRoleWritesEnabled();
         return await this.rolesService.restore(id);
+    }
+
+    private ensureRoleWritesEnabled(): void {
+        if (this.configService.get<string>('ROLES_WRITE_ENABLED') !== 'true') {
+            throw new ForbiddenException('La administración de roles está deshabilitada');
+        }
     }
 
 }

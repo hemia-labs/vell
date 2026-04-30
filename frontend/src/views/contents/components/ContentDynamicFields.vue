@@ -147,6 +147,14 @@ function getTextMaxLength(field: ContentTypeField) {
   return 255
 }
 
+function getTextMinLength(field: ContentTypeField) {
+  return getNumberMeta(field, 'minLength')
+}
+
+function getTextareaRows(field: ContentTypeField) {
+  return getNumberMeta(field, 'rows') ?? undefined
+}
+
 function getMaxSizeBytes(field: ContentTypeField) {
   return getNumberMeta(field, 'maxSizeBytes') ?? getNumberMeta(field, 'maxSize')
 }
@@ -271,7 +279,9 @@ function formatFileSize(bytes: number) {
           :model-value="toText(getValue(field))"
           class="min-h-28"
           :disabled="disabled"
+          :minlength="getTextMinLength(field)"
           :maxlength="getTextMaxLength(field)"
+          :rows="getTextareaRows(field)"
           @update:model-value="emit('updateValue', field.fieldKey, String($event), field.id)"
         />
 
@@ -415,6 +425,9 @@ function formatFileSize(bytes: number) {
           type="number"
           :model-value="toText(getValue(field))"
           :disabled="disabled"
+          :min="getNumberMeta(field, 'min')"
+          :max="getNumberMeta(field, 'max')"
+          :step="getNumberMeta(field, 'step')"
           @update:model-value="emit('updateValue', field.fieldKey, Number($event), field.id)"
         />
 
@@ -434,6 +447,7 @@ function formatFileSize(bytes: number) {
           type="text"
           :model-value="toText(getValue(field))"
           :disabled="disabled"
+          :minlength="field.fieldType === 'text' ? getTextMinLength(field) : undefined"
           :maxlength="field.fieldType === 'text' ? getTextMaxLength(field) : undefined"
           @update:model-value="emit('updateValue', field.fieldKey, String($event), field.id)"
         />

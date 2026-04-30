@@ -224,20 +224,6 @@ function removeOption(index: number) {
         <FieldLabel>Default</FieldLabel>
         <FieldContent><Input :model-value="valueOf('defaultValue', '')" placeholder="Sin título" @update:model-value="patch('defaultValue', String($event))" /></FieldContent>
       </Field>
-      <Field class="sm:col-span-2">
-        <FieldLabel>Regex</FieldLabel>
-        <FieldContent>
-          <Input :model-value="valueOf('regex', '')" placeholder="^[a-z0-9-]+$" @update:model-value="patch('regex', String($event))" />
-          <p class="m-0 text-[12px] text-(--app-muted)">Ejemplo: ^[a-z0-9-]+$ para slugs.</p>
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel>Slug</FieldLabel>
-        <FieldContent class="flex h-9 items-center gap-2">
-          <Switch :model-value="valueOf('isSlug', false)" @update:model-value="patch('isSlug', Boolean($event))" />
-          <span class="text-[12.5px] text-(--app-muted)">{{ valueOf('isSlug', false) ? 'Sí' : 'No' }}</span>
-        </FieldContent>
-      </Field>
     </div>
 
     <div v-else-if="fieldType === 'number'" class="grid gap-3 sm:grid-cols-4">
@@ -419,23 +405,6 @@ function removeOption(index: number) {
       <Field>
         <FieldLabel>Meta JSON</FieldLabel>
         <FieldContent><Textarea v-model="jsonModel" class="min-h-28 font-mono text-xs" /></FieldContent>
-      </Field>
-    </div>
-
-    <div class="grid gap-3 border-t border-(--app-line) pt-3 sm:grid-cols-2">
-      <Field>
-        <FieldLabel>Computed</FieldLabel>
-        <FieldContent class="flex h-9 items-center gap-2">
-          <Switch :model-value="valueOf('computed', false)" @update:model-value="patch('computed', Boolean($event))" />
-          <span class="text-[12.5px] text-(--app-muted)">{{ valueOf('computed', false) ? 'Sí' : 'No' }}</span>
-        </FieldContent>
-      </Field>
-      <Field>
-        <FieldLabel>Formula</FieldLabel>
-        <FieldContent>
-          <Input :model-value="valueOf('formula', '')" placeholder="{{title}}-{{id}}" @update:model-value="patch('formula', String($event))" />
-          <p class="m-0 text-[12px] text-(--app-muted)">Ejemplo: &#123;&#123;title&#125;&#125;-&#123;&#123;id&#125;&#125; para generar valor calculado.</p>
-        </FieldContent>
       </Field>
     </div>
   </section>

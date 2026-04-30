@@ -1,108 +1,106 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import {
-  ChevronDown,
   Filter,
-  MoreHorizontal,
   Plus,
   RefreshCw,
-  RotateCcw,
-  Search,
-  ShieldCheck,
   AlertCircleIcon
 } from 'lucide-vue-next'
-import VDataTable, { type VDataTableColumn, type VDataTableKey } from '@/components/core/VDataTable.vue'
+import VActionMenu, { type VActionMenuAction } from '@/components/core/VActionMenu.vue'
+import VDataTable, { type VDataTableColumn } from '@/components/core/VDataTable.vue'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle
+} from '@/components/ui/alert-dialog'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Field, FieldContent, FieldLabel } from '@/components/ui/field'
-import { Input } from '@/components/ui/input'
 import {
   Menubar,
-  MenubarCheckboxItem,
   MenubarContent,
   MenubarItem,
   MenubarMenu,
   MenubarTrigger
 } from '@/components/ui/menubar'
+import { useAuthorization } from '@/composables/auth/useAuthorization'
 import { useRoles } from '@/composables/roles/useRoles'
+import { env } from '@/config/env'
+import RoleFormDialog from './components/RoleFormDialog.vue'
+import type { Role } from '@/domain/models/role.model'
 
-const { roles, isLoading, errorMessage, loadRoles } = useRoles()
-const search = ref('')
-const selectedScopes = ref<string[]>([])
-const selectedPermissions = ref<string[]>([])
-const selectedIds = ref<VDataTableKey[]>([])
+const { roles, isLoading, errorMessage, loadRoles, deleteRole } = useRoles()
+const { can, filterAllowed } = useAuthorization()
 const currentPage = ref(1)
+const isCreateRoleDialogOpen = ref(false)
+const isEditRoleDialogOpen = ref(false)
+const isDeleteRoleDialogOpen = ref(false)
+const editRoleId = ref<string | null>(null)
+const deleteRoleId = ref<string | null>(null)
+const selectedRoleAction = ref<string | null>(null)
 const itemsPerPage = 10
 
 const roleTableColumns: VDataTableColumn[] = [
   { key: 'name', label: 'Rol' },
   { key: 'slug', label: 'Slug' },
   { key: 'scope', label: 'Alcance' },
+  { key: 'level', label: 'Nivel' },
   { key: 'permissions', label: 'Permisos' },
   { key: 'description', label: 'Descripción' }
 ]
 
-const normalizedSearch = computed(() => search.value.trim().toLowerCase())
-const paginationTotal = computed(() => Math.max(roles.value.length, filteredRoles.value.length))
-const activeFilterCount = computed(() => selectedScopes.value.length + selectedPermissions.value.length)
+const paginationTotal = computed(() => roles.value.length)
+const canWriteRoles = computed(() => env.VITE_ROLES_WRITE_ENABLED === true)
+const hasRoleActions = computed(() => canWriteRoles.value && can(['roles:edit', 'roles:delete']))
+const editRole = computed(() => roles.value.find((role) => role.id === editRoleId.value) ?? null)
+const deletingRole = computed(() => roles.value.find((role) => role.id === deleteRoleId.value) ?? null)
 
-const scopeOptions = computed(() => {
-  return Array.from(new Set(roles.value.map((role) => role.scope).filter(Boolean)))
-    .sort((current, next) => String(current).localeCompare(String(next)))
-    .map((scope) => ({ label: String(scope), value: String(scope) }))
-})
-
-const permissionOptions = computed(() => {
-  const permissions = roles.value.flatMap((role) => role.permissions.map((permission) => permission.slug))
-
-  return Array.from(new Set(permissions))
-    .sort((current, next) => current.localeCompare(next))
-    .map((permission) => ({ label: permission, value: permission }))
-})
-
-const filteredRoles = computed(() => {
-  return roles.value.filter((role) => {
-    const matchesSearch =
-      !normalizedSearch.value ||
-      [
-        role.name,
-        role.slug,
-        role.scope,
-        role.description,
-        ...role.permissions.map((permission) => permission.slug)
-      ]
-        .filter(Boolean)
-        .some((value) => String(value).toLowerCase().includes(normalizedSearch.value))
-    const matchesScope = selectedScopes.value.length === 0 || Boolean(role.scope && selectedScopes.value.includes(role.scope))
-    const matchesPermission =
-      selectedPermissions.value.length === 0 ||
-      role.permissions.some((permission) => selectedPermissions.value.includes(permission.slug))
-
-    return matchesSearch && matchesScope && matchesPermission
-  })
-})
-
-function updateOption(collection: string[], value: string, checked: boolean) {
-  if (checked) {
-    return collection.includes(value) ? collection : [...collection, value]
+function getRoleActions(role: Role): VActionMenuAction[] {
+  if (!canWriteRoles.value) {
+    return []
   }
 
-  return collection.filter((item) => item !== value)
+  return [
+    { key: 'edit', label: 'Editar rol', permission: 'roles:edit' },
+    { key: 'delete', label: 'Eliminar rol', permission: 'roles:delete', danger: true, disabled: role.slug === 'super-admin' }
+  ]
 }
 
-function toggleScope(scope: string, checked: boolean) {
-  selectedScopes.value = updateOption(selectedScopes.value, scope, checked)
+function handleRoleAction(action: VActionMenuAction, role: Role) {
+  if (!can(action.permission)) {
+    return
+  }
+
+  selectedRoleAction.value = action.key
+
+  if (action.key === 'edit') {
+    editRoleId.value = role.id
+    isEditRoleDialogOpen.value = true
+  }
+
+  if (action.key === 'delete') {
+    deleteRoleId.value = role.id
+    isDeleteRoleDialogOpen.value = true
+  }
 }
 
-function togglePermission(permission: string, checked: boolean) {
-  selectedPermissions.value = updateOption(selectedPermissions.value, permission, checked)
-}
+async function submitRoleDelete() {
+  if (!deletingRole.value) {
+    return
+  }
 
-function clearFilters() {
-  search.value = ''
-  selectedScopes.value = []
-  selectedPermissions.value = []
+  const result = await deleteRole(deletingRole.value.id)
+  if (!result) {
+    return
+  }
+
+  isDeleteRoleDialogOpen.value = false
+  deleteRoleId.value = null
 }
 
 onMounted(loadRoles)
@@ -125,7 +123,7 @@ onMounted(loadRoles)
           <RefreshCw :size="14" :class="{ 'animate-spin': isLoading }" />
           Actualizar
         </Button>
-        <Button size="sm">
+        <Button v-if="canWriteRoles" v-can="'roles:create'" size="sm" @click="isCreateRoleDialogOpen = true">
           <Plus :size="14" />
           Nuevo rol
         </Button>
@@ -144,104 +142,18 @@ onMounted(loadRoles)
       </AlertDescription>
     </Alert>
 
-    <section class="flex items-center justify-between gap-3 max-[920px]:flex-col max-[920px]:items-stretch" aria-label="Filtros de roles">
-      <Field class="min-w-[min(100%,280px)] flex-[1_1_360px]">
-        <FieldLabel class="sr-only" for="roles-search">Buscar roles</FieldLabel>
-        <FieldContent class="relative text-(--app-muted)">
-          <Search class="absolute left-3 top-1/2 z-[1] -translate-y-1/2" :size="14" />
-          <Input
-            id="roles-search"
-            v-model="search"
-            class="h-8.5 border-(--app-line) bg-(--app-surface) pl-8.5 text-[13px] text-(--app-ink)"
-            placeholder="Buscar por nombre, slug o permiso"
-          />
-        </FieldContent>
-      </Field>
-
-      <div class="flex shrink-0 items-center justify-end gap-2 max-[920px]:justify-between max-[760px]:flex-col max-[760px]:items-stretch">
-        <Menubar class="h-8.5 border-(--app-line) bg-(--app-surface) p-0.5 max-[760px]:w-full max-[760px]:justify-start max-[760px]:overflow-x-auto">
-          <MenubarMenu v-if="scopeOptions.length">
-            <MenubarTrigger class="h-7 gap-1.5 text-[12.5px] text-(--app-ink-2)" :class="{ 'text-(--app-ink)': selectedScopes.length }">
-              <span>Alcance</span>
-              <b v-if="selectedScopes.length" class="rounded-full bg-(--app-ink) px-1.5 py-px text-[10.5px] font-medium text-(--app-bg)">{{ selectedScopes.length }}</b>
-              <ChevronDown :size="12" />
-            </MenubarTrigger>
-            <MenubarContent>
-              <MenubarCheckboxItem
-                v-for="scope in scopeOptions"
-                :key="scope.value"
-                :model-value="selectedScopes.includes(scope.value)"
-                @update:model-value="toggleScope(scope.value, Boolean($event))"
-              >
-                {{ scope.label }}
-              </MenubarCheckboxItem>
-            </MenubarContent>
-          </MenubarMenu>
-
-          <MenubarMenu v-if="permissionOptions.length">
-            <MenubarTrigger class="h-7 gap-1.5 text-[12.5px] text-(--app-ink-2)" :class="{ 'text-(--app-ink)': selectedPermissions.length }">
-              <span>Permiso</span>
-              <b v-if="selectedPermissions.length" class="rounded-full bg-(--app-ink) px-1.5 py-px text-[10.5px] font-medium text-(--app-bg)">{{ selectedPermissions.length }}</b>
-              <ChevronDown :size="12" />
-            </MenubarTrigger>
-            <MenubarContent>
-              <MenubarCheckboxItem
-                v-for="permission in permissionOptions"
-                :key="permission.value"
-                :model-value="selectedPermissions.includes(permission.value)"
-                @update:model-value="togglePermission(permission.value, Boolean($event))"
-              >
-                {{ permission.label }}
-              </MenubarCheckboxItem>
-            </MenubarContent>
-          </MenubarMenu>
-
-          <div v-if="!permissionOptions.length && !scopeOptions.length" class="px-3 py-1">
-            <span class="text-[12.5px] text-(--app-muted)">No hay filtros disponibles</span>
-          </div>
-        </Menubar>
-
-        <Button v-if="activeFilterCount || search" variant="ghost" size="sm" class="h-[34px]" @click="clearFilters">
-          <RotateCcw :size="14" />
-          Limpiar
-        </Button>
-
-        <div class="min-w-25 text-right text-[12.5px] text-(--app-muted) max-[760px]:text-left">
-          {{ filteredRoles.length }} de {{ roles.length }} roles
-        </div>
-      </div>
-    </section>
-
     <section class="overflow-hidden rounded-(--app-radius-lg) border border-(--app-line) bg-(--app-surface) shadow-(--app-shadow)" aria-label="Lista de roles">
-      <div class="flex min-h-11.5 items-center justify-between gap-4 border-b border-(--app-line) bg-(--app-surface-2) px-3.5 py-2 text-[12.5px] text-(--app-muted) max-[760px]:flex-col max-[760px]:items-stretch">
-        <div class="inline-flex items-center gap-1.75 font-medium text-(--app-ink-2)">
-          <ShieldCheck :size="15" />
-          <span>{{ selectedIds.length }} seleccionados</span>
-        </div>
-        <div class="flex items-center gap-1.5 max-[760px]:flex-wrap">
-          <Button variant="outline" size="sm">Duplicar</Button>
-          <Button variant="outline" size="sm">Desactivar</Button>
-          <Button variant="ghost" size="icon-sm" aria-label="Más acciones">
-            <MoreHorizontal :size="15" />
-          </Button>
-        </div>
-      </div>
-
       <VDataTable
-        v-model:selected-keys="selectedIds"
         v-model:page="currentPage"
-        :rows="filteredRoles"
+        :rows="roles"
         :columns="roleTableColumns"
         row-key="id"
-        selectable
-        actions
+        :actions="hasRoleActions"
         pagination
         min-width-class="min-w-[900px]"
         :items-per-page="itemsPerPage"
         :total-items="paginationTotal"
-        select-all-label="Seleccionar todos los roles visibles"
-        :row-select-label="(role) => `Seleccionar rol ${role.name}`"
-        :empty-message="isLoading ? 'Cargando roles...' : 'No hay roles que coincidan con la búsqueda.'"
+        :empty-message="isLoading ? 'Cargando roles...' : 'No hay roles registrados.'"
       >
         <template #cell-name="{ row: role }">
           <span class="flex min-w-0 flex-col text-sm font-medium text-(--app-ink)">
@@ -254,9 +166,11 @@ onMounted(loadRoles)
         </template>
 
         <template #cell-scope="{ row: role }">
-          <span class="text-[12.5px] text-(--app-ink-2)">
-            {{ role.scope || 'Sin alcance' }}
-          </span>
+          <Badge variant="secondary">{{ role.scope || 'Sin alcance' }}</Badge>
+        </template>
+
+        <template #cell-level="{ row: role }">
+          <Badge variant="outline">Nivel {{ role.level }}</Badge>
         </template>
 
         <template #cell-permissions="{ row: role }">
@@ -303,21 +217,54 @@ onMounted(loadRoles)
         </template>
 
         <template #actions="{ row: role }">
-          <Button variant="ghost" size="icon-sm" :aria-label="`Acciones para ${role.name}`">
-            <MoreHorizontal :size="15" />
-          </Button>
+          <VActionMenu
+            v-if="filterAllowed(getRoleActions(role)).length"
+            v-model="selectedRoleAction"
+            :actions="filterAllowed(getRoleActions(role))"
+            :label="`Acciones para ${role.name}`"
+            @select="handleRoleAction($event, role)"
+          />
         </template>
 
         <template #empty>
           <RefreshCw v-if="isLoading" class="mx-auto mb-2 animate-spin" :size="18" />
           <Filter v-else class="mx-auto mb-2" :size="18" />
-          {{ isLoading ? 'Cargando roles...' : 'No hay roles que coincidan con la búsqueda.' }}
+          {{ isLoading ? 'Cargando roles...' : 'No hay roles registrados.' }}
         </template>
 
         <template #pagination-summary>
-          Mostrando <strong>1-{{ filteredRoles.length }}</strong> de <strong>{{ roles.length }}</strong>
+          Mostrando <strong>1-{{ roles.length }}</strong> de <strong>{{ roles.length }}</strong>
         </template>
       </VDataTable>
     </section>
+
+    <RoleFormDialog
+      v-model:open="isCreateRoleDialogOpen"
+      mode="create"
+      @saved="loadRoles"
+    />
+    <RoleFormDialog
+      v-model:open="isEditRoleDialogOpen"
+      mode="edit"
+      :role="editRole"
+      @saved="loadRoles"
+    />
+
+    <AlertDialog v-model:open="isDeleteRoleDialogOpen">
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Eliminar rol</AlertDialogTitle>
+          <AlertDialogDescription>
+            Se eliminará {{ deletingRole?.name || 'este rol' }}. Los usuarios con este rol perderán esos permisos.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel>Cancelar</AlertDialogCancel>
+          <AlertDialogAction class="bg-destructive text-white hover:bg-destructive/90" :disabled="isLoading" @click="submitRoleDelete">
+            Eliminar
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   </div>
 </template>

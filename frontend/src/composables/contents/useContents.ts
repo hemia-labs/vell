@@ -89,20 +89,14 @@ export function useContents() {
       maxLength: helpers.withMessage('Máximo 170 caracteres', maxLength(170))
     },
     fieldValues: {
-      requiredFields: helpers.withMessage('Completa los campos requeridos', validateRequiredDynamicFields)
+      dynamicFields: helpers.withMessage('Revisa los campos dinámicos', validateDynamicFields)
     }
   }))
   const v$ = useVuelidate(rules, form)
   const isFormValid = computed(() => !v$.value.$invalid)
 
-  function validateRequiredDynamicFields(values: ContentFieldValueInput[] = []) {
-    return dynamicValidationFields.value.every((field) => {
-      if (!field.isRequired) {
-        return true
-      }
-
-      return !isEmptyDynamicFieldValue(getFieldValue(values, field))
-    })
+  function validateDynamicFields(values: ContentFieldValueInput[] = []) {
+    return dynamicValidationFields.value.every(field => getDynamicFieldValidationErrors(field, values).length === 0)
   }
 
   async function runAction<T>(message: string, action: () => Promise<T>): Promise<T | null> {
@@ -269,15 +263,15 @@ export function useContents() {
 
   function setDynamicValidationFields(fields: ContentTypeField[] = []) {
     dynamicValidationFields.value = [...fields]
+    applyDynamicFieldDefaults(fields)
   }
 
   function getDynamicFieldErrors(field: ContentTypeField): string[] {
-    if (!v$.value.fieldValues?.$dirty || !field.isRequired) {
+    if (!v$.value.fieldValues?.$dirty) {
       return []
     }
 
-    const value = getFieldValue(form.value.fieldValues, field)
-    return isEmptyDynamicFieldValue(value) ? [`${field.name} es requerido`] : []
+    return getDynamicFieldValidationErrors(field, form.value.fieldValues)
   }
 
   function setTagIds(tagIds: string[]) {
@@ -365,6 +359,8 @@ export function useContents() {
   }
 
   function toPayload(source: ContentForm): CreateContent {
+    const fieldValues = applyDynamicFieldMetaValues(source.fieldValues ?? [])
+
     return {
       title: source.title.trim(),
       slug: source.slug.trim(),
@@ -380,7 +376,7 @@ export function useContents() {
       metaDescription: source.metaDescription?.trim() || null,
       publishedAt: source.publishedAt || null,
       tagIds: source.tagIds ?? [],
-      fieldValues: source.fieldValues ?? [],
+      fieldValues,
       mediaItems: (source.mediaItems ?? [])
         .filter((mediaItem) => Boolean(mediaItem.mediaId))
         .map((mediaItem, index) => ({
@@ -405,7 +401,7 @@ export function useContents() {
     }
 
     const payload = toPayload(source)
-    payload.fieldValues = resolveFieldValues(source.fieldValues ?? [], uploadedByFile)
+    payload.fieldValues = resolveFieldValues(payload.fieldValues ?? [], uploadedByFile)
     payload.mediaItems = resolveMediaItems(source.mediaItems ?? [], uploadedByFile)
     return payload
   }
@@ -491,6 +487,156 @@ export function useContents() {
 
   function getFieldValue(values: ContentFieldValueInput[], field: ContentTypeField) {
     return values.find((item) => item.fieldId === field.id || item.fieldKey === field.fieldKey)?.value
+  }
+
+  function setDefaultFieldValue(field: ContentTypeField, value: unknown) {
+    if (isEmptyDynamicFieldValue(value)) {
+      return
+    }
+
+    const values = [...(form.value.fieldValues ?? [])]
+    const exists = values.some(item => item.fieldId === field.id || item.fieldKey === field.fieldKey)
+
+    if (!exists) {
+      values.push({ fieldId: field.id, fieldKey: field.fieldKey, value })
+      form.value.fieldValues = values
+    }
+  }
+
+  function applyDynamicFieldDefaults(fields: ContentTypeField[]) {
+    fields.forEach((field) => {
+      const value = getMetaDefaultValue(field, false)
+      if (value !== undefined) {
+        setDefaultFieldValue(field, value)
+      }
+    })
+  }
+
+  function applyDynamicFieldMetaValues(values: ContentFieldValueInput[]): ContentFieldValueInput[] {
+    const nextValues = [...values]
+
+    dynamicValidationFields.value.forEach((field) => {
+      const index = nextValues.findIndex(item => item.fieldId === field.id || item.fieldKey === field.fieldKey)
+      const current = index >= 0 ? nextValues[index] : null
+      const metaValue = getMetaDefaultValue(field, true)
+
+      if (metaValue === undefined && (!current || !isEmptyDynamicFieldValue(current.value))) {
+        return
+      }
+
+      if (current && metaValue === undefined) {
+        return
+      }
+
+      const value = metaValue ?? current?.value
+      if (isEmptyDynamicFieldValue(value)) {
+        return
+      }
+
+      const nextValue = {
+        fieldId: field.id,
+        fieldKey: field.fieldKey,
+        value,
+        mediaAssets: current?.mediaAssets
+      }
+
+      if (index >= 0) {
+        nextValues[index] = nextValue
+      } else {
+        nextValues.push(nextValue)
+      }
+    })
+
+    return nextValues
+  }
+
+  function getMetaDefaultValue(field: ContentTypeField, includeAutoUpdate: boolean): unknown {
+    if (field.fieldType === 'date' && (field.meta?.autoNow === true || (includeAutoUpdate && field.meta?.autoOnUpdate === true))) {
+      return new Date().toISOString()
+    }
+
+    return field.meta?.defaultValue
+  }
+
+  function getDynamicFieldValidationErrors(field: ContentTypeField, values: ContentFieldValueInput[] = []): string[] {
+    const errors: string[] = []
+    const value = getFieldValue(values, field)
+
+    if (field.isRequired && isEmptyDynamicFieldValue(value)) {
+      errors.push(`${field.name} es requerido`)
+      return errors
+    }
+
+    if (isEmptyDynamicFieldValue(value)) {
+      return errors
+    }
+
+    if (isTextField(field) && typeof value === 'string') {
+      const minLength = getNumberMeta(field, 'minLength')
+      const maxLength = getNumberMeta(field, 'maxLength')
+      if (minLength !== undefined && value.length < minLength) errors.push(`${field.name} debe tener mínimo ${minLength} caracteres`)
+      if (maxLength !== undefined && value.length > maxLength) errors.push(`${field.name} debe tener máximo ${maxLength} caracteres`)
+    }
+
+    if (field.fieldType === 'number' && typeof value === 'number') {
+      const min = getNumberMeta(field, 'min')
+      const max = getNumberMeta(field, 'max')
+      if (min !== undefined && value < min) errors.push(`${field.name} debe ser mayor o igual a ${min}`)
+      if (max !== undefined && value > max) errors.push(`${field.name} debe ser menor o igual a ${max}`)
+    }
+
+    if (field.fieldType === 'select') {
+      const options = getSelectOptionValues(field)
+      if (options.length > 0 && typeof value === 'string' && !options.includes(value)) {
+        errors.push(`${field.name} debe usar una opción válida`)
+      }
+    }
+
+    if (field.fieldType === 'image' || field.fieldType === 'file') {
+      errors.push(...getFileErrors(field, value))
+    }
+
+    return errors
+  }
+
+  function isTextField(field: ContentTypeField) {
+    return field.fieldType === 'text' || field.fieldType === 'textarea' || field.fieldType === 'richtext'
+  }
+
+  function getNumberMeta(field: ContentTypeField, key: string): number | undefined {
+    const value = field.meta?.[key]
+    return typeof value === 'number' && Number.isFinite(value) ? value : undefined
+  }
+
+  function getSelectOptionValues(field: ContentTypeField): string[] {
+    const options = field.meta?.options
+    if (!Array.isArray(options)) return []
+
+    return options.flatMap((option) => {
+      if (typeof option === 'string') return [option]
+      if (!option || typeof option !== 'object') return []
+      const record = option as Record<string, unknown>
+      const value = record.value ?? record.text ?? record.label
+      return typeof value === 'string' && value ? [value] : []
+    })
+  }
+
+  function getFileErrors(field: ContentTypeField, value: unknown): string[] {
+    const files = Array.isArray(value) ? value.filter((item): item is File => item instanceof File) : value instanceof File ? [value] : []
+    if (files.length === 0) return []
+
+    const errors: string[] = []
+    const maxSize = getNumberMeta(field, 'maxSizeBytes') ?? getNumberMeta(field, 'maxSize')
+    const maxFiles = getNumberMeta(field, 'maxFiles')
+    const allowedTypes = Array.isArray(field.meta?.allowedTypes)
+      ? field.meta.allowedTypes.filter((item): item is string => typeof item === 'string')
+      : []
+
+    if (maxFiles !== undefined && files.length > maxFiles) errors.push(`${field.name} permite máximo ${maxFiles} archivos`)
+    if (maxSize !== undefined && files.some(file => file.size > maxSize)) errors.push(`${field.name} excede el tamaño máximo`)
+    if (allowedTypes.length > 0 && files.some(file => !allowedTypes.includes(file.type))) errors.push(`${field.name} tiene un tipo de archivo no permitido`)
+
+    return errors
   }
 
   function isEmptyDynamicFieldValue(value: unknown): boolean {

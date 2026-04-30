@@ -28,6 +28,42 @@ const ROLES = [
   { name: 'viewer', slug: 'viewer', description: 'Acceso solo lectura', scope: 'Solo lectura', level: 4, permissions: ['content:view', 'content-types:view', 'pages:view', 'media:view', 'categories:view', 'tags:view'] },
 ];
 
+type SeedSetting = {
+  key: string;
+  value: unknown;
+  type: 'text' | 'number' | 'boolean' | 'image' | 'array' | 'json';
+  group: 'general' | 'content' | 'mail' | 'system' | 'seo';
+  description: string;
+  isPublic?: boolean;
+  isReadonly?: boolean;
+};
+
+const SETTINGS: SeedSetting[] = [
+  { key: 'site_name', value: 'Mi CMS', type: 'text', group: 'general', isPublic: true, description: 'Nombre del sitio visible en el header y en el SEO' },
+  { key: 'site_description', value: 'Un CMS moderno', type: 'text', group: 'general', isPublic: true, description: 'Descripción corta del sitio, usada en meta tags globales' },
+  { key: 'site_logo', value: null, type: 'image', group: 'general', isPublic: true, description: 'Logo principal del sitio, seleccionado desde la Media Library' },
+  { key: 'site_favicon', value: null, type: 'image', group: 'general', isPublic: true, description: 'Favicon del sitio' },
+  { key: 'default_language', value: 'es', type: 'text', group: 'general', isPublic: true, description: 'Idioma por defecto del CMS' },
+  { key: 'allowed_languages', value: ['es', 'en', 'fr'], type: 'array', group: 'general', isPublic: true, description: 'Idiomas disponibles en el sitio' },
+  { key: 'timezone', value: 'America/Mexico_City', type: 'text', group: 'general', isPublic: true, description: 'Zona horaria del sitio para mostrar fechas' },
+  { key: 'posts_per_page', value: 10, type: 'number', group: 'content', isPublic: true, description: 'Número de contenidos por página en los listados' },
+  { key: 'allow_comments', value: false, type: 'boolean', group: 'content', isPublic: true, description: 'Habilita o deshabilita comentarios globalmente' },
+  { key: 'auto_save_interval', value: 30, type: 'number', group: 'content', description: 'Intervalo en segundos para el auto-guardado en el editor' },
+  { key: 'max_upload_size_mb', value: 10, type: 'number', group: 'content', description: 'Tamaño máximo permitido en MB para subir archivos a la Media Library' },
+  { key: 'seo_default_title', value: 'Mi CMS - Bienvenido', type: 'text', group: 'seo', isPublic: true, description: 'Título SEO global cuando una página no tiene meta_title propio' },
+  { key: 'seo_default_description', value: 'El mejor CMS construido con NestJS', type: 'text', group: 'seo', isPublic: true, description: 'Descripción SEO global por defecto' },
+  { key: 'google_analytics_id', value: null, type: 'text', group: 'seo', isPublic: true, description: 'ID de Google Analytics para tracking en el frontend' },
+  { key: 'robots_txt', value: 'User-agent: *\nAllow: /', type: 'text', group: 'seo', isPublic: true, description: 'Contenido del archivo robots.txt' },
+  { key: 'smtp_host', value: null, type: 'text', group: 'mail', description: 'Host del servidor SMTP para envío de emails' },
+  { key: 'smtp_port', value: 587, type: 'number', group: 'mail', description: 'Puerto del servidor SMTP' },
+  { key: 'smtp_user', value: null, type: 'text', group: 'mail', description: 'Usuario de autenticación SMTP' },
+  { key: 'smtp_password', value: null, type: 'text', group: 'mail', description: 'Contraseña SMTP. Nunca exponer en la API pública' },
+  { key: 'mail_from', value: null, type: 'text', group: 'mail', description: 'Dirección remitente en los emails enviados' },
+  { key: 'app_version', value: '1.0.0', type: 'text', group: 'system', isReadonly: true, description: 'Versión actual del CMS. Solo se actualiza en deploys' },
+  { key: 'maintenance_mode', value: false, type: 'boolean', group: 'system', isPublic: true, description: 'Si es true, el sitio muestra una página de mantenimiento' },
+  { key: 'db_seeded', value: true, type: 'boolean', group: 'system', isReadonly: true, description: 'Indica si el seed inicial ya fue ejecutado' },
+];
+
 function expandRolePermissions(permissions: string[]): string[] {
   const expanded: string[] = [];
   for (const perm of permissions) {
@@ -40,6 +76,38 @@ function expandRolePermissions(permissions: string[]): string[] {
     }
   }
   return [...new Set(expanded)];
+}
+
+async function seedSettings(queryRunner: QueryRunner): Promise<void> {
+  for (const setting of SETTINGS) {
+    await queryRunner.query(
+      `INSERT INTO "settings" ("key", "value", "type", "group", "description", "is_public", "is_readonly")
+       VALUES ($1, $2::jsonb, $3, $4, $5, $6, $7)
+       ON CONFLICT ("key") DO UPDATE SET
+         "type" = EXCLUDED."type",
+         "group" = EXCLUDED."group",
+         "description" = EXCLUDED."description",
+         "is_public" = EXCLUDED."is_public",
+         "is_readonly" = EXCLUDED."is_readonly",
+         "updated_at" = now()`,
+      [
+        setting.key,
+        JSON.stringify(setting.value),
+        setting.type,
+        setting.group,
+        setting.description,
+        setting.isPublic ?? false,
+        setting.isReadonly ?? false,
+      ]
+    );
+  }
+}
+
+async function removeSettings(queryRunner: QueryRunner): Promise<void> {
+  await queryRunner.query(
+    `DELETE FROM "settings" WHERE "key" IN (${SETTINGS.map((_, index) => `$${index + 1}`).join(', ')})`,
+    SETTINGS.map(setting => setting.key)
+  );
 }
 
 export class SeedRolesAndPermissions1808434165290 implements MigrationInterface {
@@ -94,10 +162,14 @@ export class SeedRolesAndPermissions1808434165290 implements MigrationInterface 
         [superAdminEmail]
       );
     }
+
+    await seedSettings(queryRunner);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const superAdminEmail = process.env.SUPER_ADMIN_EMAIL;
+
+    await removeSettings(queryRunner);
 
     if (!superAdminEmail) {
       console.warn('[SeedRolesAndPermissions] SUPER_ADMIN_EMAIL not set — skipping user cleanup');

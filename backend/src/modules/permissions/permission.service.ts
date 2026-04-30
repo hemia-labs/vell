@@ -10,6 +10,10 @@ export class PermissionsService {
         private readonly repository: Repository<Permission>,
     ) {}
 
+    async findAll(): Promise<Permission[]> {
+        return this.repository.find({ order: { slug: 'ASC' } });
+    }
+
     async ensureExistByIds(ids: string[]): Promise<void> {
         const permissions = await this.repository.findBy({ id: In(ids) });
         const foundIds = new Set(permissions.map(permission => permission.id));

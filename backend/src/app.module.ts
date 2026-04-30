@@ -13,6 +13,8 @@ import { ContentTypesModule } from './modules/content-types/content-type.module'
 import { ContentsModule } from './modules/contents/content.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { MediaModule } from './modules/media/media.module';
+import { AuditLogModule } from './modules/audit-logs/audit-log.module';
+import { SettingsModule } from './modules/settings/settings.module';
 
 @Module({
   imports: [
@@ -34,7 +36,9 @@ import { MediaModule } from './modules/media/media.module';
     ContentTypesModule,
     ContentsModule,
     MediaModule,
-    FileUploadModule
+    FileUploadModule,
+    AuditLogModule,
+    SettingsModule
   ],
   controllers: [AppController],
   providers: [AppService],

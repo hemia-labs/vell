@@ -113,6 +113,26 @@ const router = createRouter({
           }
         },
         {
+          path: 'audit-log',
+          name: 'audit-log',
+          component: () => import('@/views/audit-logs/AuditLogsListView.vue'),
+          meta: {
+            title: 'Audit Log',
+            requiresAuth: true,
+            permissions: ['audit:view']
+          }
+        },
+        {
+          path: 'settings',
+          name: 'settings',
+          component: () => import('@/views/settings/SettingsView.vue'),
+          meta: {
+            title: 'Ajustes',
+            requiresAuth: true,
+            permissions: ['settings:view']
+          }
+        },
+        {
           path: 'content-types',
           name: 'content-types',
           component: () => import('@/views/content-types/ContentTypesListView.vue'),

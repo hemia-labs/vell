@@ -1,4 +1,4 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "../../users/entities/user.entity";
 
 export enum AuditResult {
@@ -7,6 +7,11 @@ export enum AuditResult {
 }
 
 @Entity('audit_logs')
+@Index('IDX_audit_logs_created_at', ['createdAt'])
+@Index('IDX_audit_logs_user_created_at', ['userId', 'createdAt'])
+@Index('IDX_audit_logs_entity_entity_id', ['entity', 'entityId'])
+@Index('IDX_audit_logs_action_created_at', ['action', 'createdAt'])
+@Index('IDX_audit_logs_result_created_at', ['result', 'createdAt'])
 export class AuditLog {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -14,7 +19,7 @@ export class AuditLog {
   @Column({ name: 'user_id', nullable: true })
   userId: string | null;
 
-  @ManyToOne(() => User, { nullable: true })
+  @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
   @JoinColumn({ name: 'user_id' })
   user: User | null;
 
